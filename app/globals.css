@@ -1,26 +1,402 @@
+/* 
+ * Fichier : app/globals.css
+ * Description : Styles globaux pour l'application co-living avec Tailwind v4
+ * Inclut : Import Tailwind v4, variables CSS personnalisées, utilitaires visuels
+ */
+
+/* Import Tailwind CSS v4 */
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+/* Variables CSS pour le thème (mode clair et sombre) */
+@layer theme {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    /* === COULEURS MODE CLAIR === */
+    /* Couleurs de base */
+    --color-background: 0 0% 100%;                    /* Blanc pur pour l'arrière-plan */
+    --color-foreground: 222.2 84% 4.9%;              /* Gris très foncé pour le texte */
+    
+    /* Couleurs des cartes et popovers */
+    --color-card: 0 0% 100%;                          /* Fond blanc pour les cartes */
+    --color-card-foreground: 222.2 84% 4.9%;         /* Texte foncé sur cartes */
+    --color-popover: 0 0% 100%;                       /* Fond des menus déroulants */
+    --color-popover-foreground: 222.2 84% 4.9%;      /* Texte des menus */
+    
+    /* Couleur principale (bleu co-living) */
+    --color-primary: 221.2 83.2% 53.3%;              /* Bleu principal pour CTA */
+    --color-primary-foreground: 210 40% 98%;         /* Texte blanc sur bleu */
+    
+    /* Couleurs secondaires */
+    --color-secondary: 210 40% 96%;                   /* Gris clair pour sections */
+    --color-secondary-foreground: 222.2 84% 4.9%;    /* Texte foncé sur gris clair */
+    
+    /* Couleurs d'état et interaction */
+    --color-muted: 210 40% 96%;                       /* Éléments désactivés */
+    --color-muted-foreground: 215.4 16.3% 46.9%;     /* Texte des éléments désactivés */
+    --color-accent: 210 40% 96%;                      /* Couleur d'accent */
+    --color-accent-foreground: 222.2 84% 4.9%;       /* Texte sur accent */
+    
+    /* Couleurs d'erreur */
+    --color-destructive: 0 84.2% 60.2%;              /* Rouge pour erreurs/suppression */
+    --color-destructive-foreground: 210 40% 98%;     /* Texte blanc sur rouge */
+    
+    /* Bordures et champs de saisie */
+    --color-border: 214.3 31.8% 91.4%;               /* Gris clair pour bordures */
+    --color-input: 214.3 31.8% 91.4%;                /* Fond des champs de saisie */
+    --color-ring: 221.2 83.2% 53.3%;                 /* Couleur de focus (bleu) */
+    
+    /* Rayon des bordures arrondies */
+    --radius: 0.5rem;                                 /* 8px par défaut */
+  }
+
+  /* === THÈME SOMBRE === */
+  .dark {
+    --color-background: 222.2 84% 4.9%;              /* Fond sombre */
+    --color-foreground: 210 40% 98%;                 /* Texte clair */
+    
+    --color-card: 222.2 84% 4.9%;                    /* Cartes sombres */
+    --color-card-foreground: 210 40% 98%;            /* Texte clair sur cartes */
+    --color-popover: 222.2 84% 4.9%;                 /* Menus sombres */
+    --color-popover-foreground: 210 40% 98%;         /* Texte clair sur menus */
+    
+    --color-primary: 217.2 91.2% 59.8%;              /* Bleu plus clair en mode sombre */
+    --color-primary-foreground: 222.2 84% 4.9%;      /* Texte sombre sur bleu clair */
+    
+    --color-secondary: 217.2 32.6% 17.5%;            /* Gris foncé pour sections */
+    --color-secondary-foreground: 210 40% 98%;       /* Texte clair sur gris foncé */
+    
+    --color-muted: 217.2 32.6% 17.5%;                /* Éléments désactivés sombres */
+    --color-muted-foreground: 215 20.2% 65.1%;       /* Texte des éléments désactivés */
+    --color-accent: 217.2 32.6% 17.5%;               /* Accent sombre */
+    --color-accent-foreground: 210 40% 98%;          /* Texte clair sur accent */
+    
+    --color-destructive: 0 62.8% 30.6%;              /* Rouge plus sombre */
+    --color-destructive-foreground: 210 40% 98%;     /* Texte clair sur rouge */
+    
+    --color-border: 217.2 32.6% 17.5%;               /* Bordures sombres */
+    --color-input: 217.2 32.6% 17.5%;                /* Champs de saisie sombres */
+    --color-ring: 224.3 76.3% 94.1%;                 /* Focus clair en mode sombre */
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* === STYLES DE BASE === */
+@layer base {
+  /* Application des couleurs CSS custom properties */
+  * {
+    border-color: hsl(var(--color-border));
+  }
+  
+  /* Style du body principal */
+  body {
+    background-color: hsl(var(--color-background));
+    color: hsl(var(--color-foreground));
+    /* Font lissée pour un meilleur rendu */
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Amélioration du scroll sur mobile */
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+  
+  /* Styles pour les titres hiérarchiques */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    letter-spacing: -0.025em;
+  }
+  
+  /* Focus visible pour l'accessibilité */
+  :focus-visible {
+    outline: 2px solid hsl(var(--color-ring));
+    outline-offset: 2px;
+  }
+}
+
+/* === UTILITAIRES PERSONNALISÉS === */
+@layer utilities {
+  /* Dégradé de fond principal pour les sections hero */
+  .gradient-bg {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
+  
+  /* Dégradé alternatif plus doux */
+  .gradient-soft {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  }
+  
+  /* Effet de verre (glassmorphism) */
+  .glass-effect {
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+  }
+  
+  /* Effet de verre sombre */
+  .glass-effect-dark {
+    background: rgba(0, 0, 0, 0.25);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  /* Ombre douce pour les cartes */
+  .shadow-soft {
+    box-shadow: 0 2px 15px -3px rgba(0, 0, 0, 0.07), 
+                0 10px 20px -2px rgba(0, 0, 0, 0.04);
+  }
+  
+  /* Ombre plus prononcée au hover */
+  .shadow-hover {
+    box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 
+                0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+  
+  /* Animation de hover pour les boutons */
+  .btn-hover {
+    transition: all 0.3s ease-in-out;
+    transform: translateY(0);
+  }
+  
+  .btn-hover:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  }
+  
+  /* Texte avec dégradé */
+  .text-gradient {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  /* Container responsive avec max-width */
+  .container-custom {
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 80rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  @media (min-width: 640px) {
+    .container-custom {
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+  }
+  
+  @media (min-width: 1024px) {
+    .container-custom {
+      padding-left: 2rem;
+      padding-right: 2rem;
+    }
+  }
+  
+  /* Section avec padding vertical */
+  .section-padding {
+    padding-top: 4rem;
+    padding-bottom: 4rem;
+  }
+  
+  @media (min-width: 768px) {
+    .section-padding {
+      padding-top: 6rem;
+      padding-bottom: 6rem;
+    }
+  }
+  
+  /* Masquer le scrollbar mais garder la fonctionnalité */
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* Masquage d'éléments sur mobile */
+  .mobile-hidden {
+    display: none;
+  }
+  
+  @media (min-width: 768px) {
+    .mobile-hidden {
+      display: block;
+    }
+  }
+  
+  /* Affichage uniquement sur mobile */
+  .mobile-only {
+    display: block;
+  }
+  
+  @media (min-width: 768px) {
+    .mobile-only {
+      display: none;
+    }
+  }
+}
+
+/* === COMPOSANTS === */
+@layer components {
+  /* Styles pour les cartes */
+  .card {
+    background-color: hsl(var(--color-card));
+    color: hsl(var(--color-card-foreground));
+    border-radius: calc(var(--radius) - 2px);
+    border: 1px solid hsl(var(--color-border));
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  }
+  
+  /* Styles pour les boutons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    border-radius: calc(var(--radius) - 2px);
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s ease-in-out;
+    outline: none;
+    border: none;
+    cursor: pointer;
+  }
+  
+  .btn:focus-visible {
+    outline: 2px solid hsl(var(--color-ring));
+    outline-offset: 2px;
+  }
+  
+  .btn:disabled {
+    pointer-events: none;
+    opacity: 0.5;
+  }
+  
+  /* Variantes de boutons */
+  .btn-default {
+    background-color: hsl(var(--color-primary));
+    color: hsl(var(--color-primary-foreground));
+  }
+  
+  .btn-default:hover {
+    background-color: hsl(var(--color-primary) / 0.9);
+  }
+  
+  .btn-secondary {
+    background-color: hsl(var(--color-secondary));
+    color: hsl(var(--color-secondary-foreground));
+  }
+  
+  .btn-secondary:hover {
+    background-color: hsl(var(--color-secondary) / 0.8);
+  }
+  
+  .btn-outline {
+    border: 1px solid hsl(var(--color-input));
+    background-color: hsl(var(--color-background));
+  }
+  
+  .btn-outline:hover {
+    background-color: hsl(var(--color-accent));
+    color: hsl(var(--color-accent-foreground));
+  }
+}
+
+/* === ANIMATIONS === */
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.6s ease-out;
+  }
+  
+  .animate-slide-in-left {
+    animation: slideInLeft 0.6s ease-out;
+  }
+  
+  .animate-slide-in-right {
+    animation: slideInRight 0.6s ease-out;
+  }
+  
+  .animate-scale-in {
+    animation: scaleIn 0.4s ease-out;
+  }
+  
+  .animate-spin-slow {
+    animation: spin 3s linear infinite;
+  }
+  
+  .animate-pulse-glow {
+    animation: pulseGlow 2s ease-in-out infinite;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.8);
+  }
+}
+
+/* === PRINT STYLES === */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .print-only {
+    display: block !important;
+  }
 }
