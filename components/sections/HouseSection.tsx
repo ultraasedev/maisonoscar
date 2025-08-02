@@ -60,17 +60,17 @@ const galleryImages = [
     className: 'lg:col-span-2 lg:row-span-2'
   },
   {
-    src: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?q=80&w=500',
+    src: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?q=80&w=800',
     alt: 'Salon moderne',
     className: ''
   },
   {
-    src: 'https://images.unsplash.com/photo-1556909264-f2d94d4cd0ae?q=80&w=500',
+    src: 'https://images.unsplash.com/photo-1592506119503-c0b18879bd5a?q=80&w=870&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
     alt: 'Cuisine équipée',
     className: ''
   },
   {
-    src: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?q=80&w=800',
+    src: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?q=80&w=1000',
     alt: 'Jardin privatif',
     className: 'md:col-span-2'
   }
