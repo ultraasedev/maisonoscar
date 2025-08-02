@@ -101,7 +101,7 @@ export const AboutSection = () => {
             </div>
             <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg">
               <div className="text-center">
-                <div className="text-2xl font-bold">5</div>
+                <div className="text-2xl font-bold">9</div>
                 <div className="text-sm">Chambres</div>
               </div>
             </div>
