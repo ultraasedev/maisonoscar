@@ -4,7 +4,7 @@ import { ProblemSolutionSection } from '@/components/sections/ProblemSolutionSec
 import { HouseSection } from '@/components/sections/HouseSection';
 import { RoomsSection } from '@/components/sections/RoomsSection';
 import { TestimonialsSection } from '@/components/sections/TestimonialsSection';
-
+import { ContactSection } from '@/components/sections/ContactSection';
 
 export default function HomePage() {
   return (
@@ -15,7 +15,7 @@ export default function HomePage() {
       <HouseSection />
       <RoomsSection />
       <TestimonialsSection />
-
+      <ContactSection />
     </main>
   );
 }
