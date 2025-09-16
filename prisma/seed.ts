@@ -450,7 +450,7 @@ async function main() {
         amount: 500,
         dueDate: new Date('2024-08-25'),
         paidDate: new Date('2024-08-25'),
-        paymentType: 'SECURITY_DEPOSIT',
+        paymentType: 'DEPOSIT',
         status: 'PAID',
       }
     }),
@@ -492,7 +492,7 @@ async function main() {
         amount: 720,
         dueDate: new Date('2024-10-10'),
         paidDate: new Date('2024-10-10'),
-        paymentType: 'SECURITY_DEPOSIT',
+        paymentType: 'DEPOSIT',
         status: 'PAID',
       }
     }),

@@ -1,162 +1,44 @@
+// Fichier : components/sections/RoomsSection.tsx
+// Description : Section chambres qui récupère les données depuis la DB
+
 'use client';
 
 import { motion, useInView, AnimatePresence } from 'framer-motion';
-import { Check, Wifi, Coffee, Car, Sparkles, Eye, Camera, Calendar, X, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { Check, Wifi, Coffee, Car, Sparkles, Eye, Camera, Calendar, X, ChevronLeft, ChevronRight, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { useRef, useState, useEffect } from 'react';
+import BookingModal from '@/components/booking/CompleteBookingModal';
 
 interface Room {
   id: string;
   name: string;
-  size: number;
+  number: number;
+  surface: number;
   price: number;
-  features: string[];
-  available: boolean;
-  isHighlight?: boolean;
-  fullEquipment: string[];
+  description?: string;
+  status: 'AVAILABLE' | 'OCCUPIED' | 'MAINTENANCE' | 'UNAVAILABLE';
+  isActive: boolean;
+  floor: number;
+  orientation: string;
+  hasPrivateBathroom: boolean;
+  hasBalcony: boolean;
+  hasDesk: boolean;
+  hasCloset: boolean;
+  hasWindow: boolean;
+  hasTV: boolean;
   images: string[];
-  description: string;
+  virtualTour?: string;
+  isVirtualTourActive: boolean;
+  bedType: string;
+  bedCount: number;
+  kitchenType: string;
+  kitchenEquipment: string[];
+  sheetsProvided: boolean;
+  petsAllowed: boolean;
+  smokingAllowed: boolean;
+  createdAt: string;
+  updatedAt: string;
+  nextAvailableDate?: string;
 }
-
-const rooms: Room[] = [
-  {
-    id: '1',
-    name: 'Studio Cosy',
-    size: 12,
-    price: 520,
-    features: ['Lit double', 'Bureau intégré', 'Rangements'],
-    fullEquipment: ['Lit double 140x200 avec matelas premium', 'Bureau ergonomique avec chaise', 'Armoire 3 portes', 'Étagères murales', 'Miroir plein pied', 'Lampe de chevet', 'Rideaux occultants', 'Chauffage individuel'],
-    images: [
-      'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?q=80&w=500',
-      'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?q=80&w=500',
-      'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?q=80&w=500'
-    ],
-    description: 'Studio parfaitement optimisé pour les étudiants et jeunes actifs. Espace de vie compact mais fonctionnel.',
-    available: true
-  },
-  {
-    id: '2',
-    name: 'Chambre Lumière',
-    size: 15,
-    price: 570,
-    features: ['Vue jardin', 'Balcon privatif', 'Dressing'],
-    fullEquipment: ['Lit double 140x200', 'Dressing walk-in', 'Bureau avec rangements', 'Balcon 4m²', 'Stores électriques', 'Prises USB intégrées', 'Éclairage LED', 'Plantes vertes incluses'],
-    images: [
-      'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?q=80&w=500',
-      'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?q=80&w=500',
-      'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?q=80&w=500'
-    ],
-    description: 'Chambre baignée de lumière naturelle avec accès direct au jardin via le balcon privatif.',
-    available: true
-  },
-  {
-    id: '3',
-    name: 'Espace Zen',
-    size: 14,
-    price: 550,
-    features: ['Ambiance calme', 'Coin lecture', 'Velux'],
-    fullEquipment: ['Lit double 160x200', 'Coin lecture avec fauteuil', 'Velux électrique', 'Bureau d\'angle', 'Bibliothèque intégrée', 'Tapis berbère', 'Diffuseur d\'huiles essentielles', 'Plaid en laine'],
-    images: [
-      'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?q=80&w=500',
-      'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?q=80&w=500',
-      'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?q=80&w=500'
-    ],
-    description: 'Refuge paisible sous les toits, idéal pour la méditation et le travail concentré.',
-    available: false
-  },
-  {
-    id: '4',
-    name: 'Chambre Panorama',
-    size: 17,
-    price: 630,
-    features: ['Vue dégagée', 'Bureau XXL', 'Baie vitrée'],
-    fullEquipment: ['Lit double 160x200', 'Bureau 180cm avec écran externe', 'Baie vitrée 3m', 'Fauteuil ergonomique', 'Rangements sur mesure', 'Mini-frigo', 'Machine à café', 'Tableau blanc'],
-    images: [
-      'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?q=80&w=500',
-      'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?q=80&w=500',
-      'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?q=80&w=500'
-    ],
-    description: 'Espace de travail premium avec vue panoramique, parfait pour les télétravailleurs.',
-    available: true,
-    isHighlight: true
-  },
-  {
-    id: '5',
-    name: 'Suite Master',
-    size: 19,
-    price: 680,
-    features: ['Salle d\'eau privée', 'Dressing walk-in', 'Terrasse'],
-    fullEquipment: ['Lit king size 180x200', 'Salle d\'eau avec douche italienne', 'Dressing 6m²', 'Terrasse privée 8m²', 'TV 55 pouces', 'Enceinte connectée', 'Climatisation', 'Mobilier design'],
-    images: [
-      'https://images.unsplash.com/photo-1540932239986-30128078f3c5?q=80&w=500',
-      'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?q=80&w=500',
-      'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?q=80&w=500'
-    ],
-    description: 'Suite parentale haut de gamme avec tous les équipements pour un confort optimal.',
-    available: true,
-    isHighlight: true
-  },
-  {
-    id: '6',
-    name: 'Chambre Design',
-    size: 13,
-    price: 540,
-    features: ['Mobilier sur mesure', 'Coin détente', 'Éclairage LED'],
-    fullEquipment: ['Lit double 140x200', 'Mobilier sur mesure', 'Éclairage LED RGB', 'Coin détente avec pouf', 'Miroir connecté', 'Prises sans fil', 'Déco moderne', 'Plantes dépolluantes'],
-    images: [
-      'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?q=80&w=500',
-      'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?q=80&w=500',
-      'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?q=80&w=500'
-    ],
-    description: 'Chambre au design contemporain avec mobilier créé spécialement pour l\'espace.',
-    available: true
-  },
-  {
-    id: '7',
-    name: 'Espace Nature',
-    size: 16,
-    price: 590,
-    features: ['Vue sur jardin', 'Plantes intégrées', 'Mezzanine'],
-    fullEquipment: ['Lit double 160x200', 'Mezzanine bureau', 'Jardin vertical', 'Vue directe jardin', 'Matériaux naturels', 'Purificateur d\'air', 'Éclairage naturel', 'Coin yoga'],
-    images: [
-      'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?q=80&w=500',
-      'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?q=80&w=500',
-      'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?q=80&w=500'
-    ],
-    description: 'Connexion directe avec la nature grâce aux nombreuses plantes et la vue sur le jardin.',
-    available: false
-  },
-  {
-    id: '8',
-    name: 'Chambre Minimaliste',
-    size: 11,
-    price: 500,
-    features: ['Design épuré', 'Rangements cachés', 'Éclairage naturel'],
-    fullEquipment: ['Lit double 140x200', 'Rangements invisibles', 'Bureau escamotable', 'Éclairage zénithal', 'Matériaux naturels', 'Déco minimaliste', 'Organiseurs intégrés', 'Miroir sans cadre'],
-    images: [
-      'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?q=80&w=500',
-      'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?q=80&w=500',
-      'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?q=80&w=500'
-    ],
-    description: 'L\'essentiel dans un espace optimisé. Parfait pour ceux qui aiment la simplicité.',
-    available: true
-  },
-  {
-    id: '9',
-    name: 'Loft Urbain',
-    size: 20,
-    price: 720,
-    features: ['Plafond haut', 'Espace salon', 'Cuisine privée'],
-    fullEquipment: ['Lit queen size 160x200', 'Salon avec canapé', 'Cuisine équipée privée', 'Plafond 4m', 'Poutres apparentes', 'Espace de réception', 'TV grand écran', 'Sound system'],
-    images: [
-      'https://images.unsplash.com/photo-1540932239986-30128078f3c5?q=80&w=500',
-      'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?q=80&w=500',
-      'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?q=80&w=500'
-    ],
-    description: 'Véritable appartement dans la maison avec cuisine privée et espace de réception.',
-    available: true,
-    isHighlight: true
-  }
-];
 
 const commonSpaces = [
   {
@@ -181,7 +63,7 @@ const commonSpaces = [
   }
 ];
 
-const RoomModal = ({ room, isOpen, onClose }: { room: Room | null; isOpen: boolean; onClose: () => void }) => {
+const RoomModal = ({ room, isOpen, onClose, onReserve }: { room: Room | null; isOpen: boolean; onClose: () => void; onReserve: (room: Room) => void }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   if (!room) return null;
@@ -193,6 +75,16 @@ const RoomModal = ({ room, isOpen, onClose }: { room: Room | null; isOpen: boole
   const prevImage = () => {
     setCurrentImageIndex((prev) => (prev - 1 + room.images.length) % room.images.length);
   };
+
+  // Image par défaut si pas d'images
+  const getImageUrl = (index: number) => {
+    if (!room.images || room.images.length === 0) {
+      return 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?q=80&w=500';
+    }
+    return room.images[index] || 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?q=80&w=500';
+  };
+
+  const imageCount = room.images?.length || 1;
 
   return (
     <AnimatePresence>
@@ -214,15 +106,15 @@ const RoomModal = ({ room, isOpen, onClose }: { room: Room | null; isOpen: boole
             {/* Header */}
             <div className="relative">
               <div className="relative h-64 sm:h-80">
-                <div 
-                  className="w-full h-full bg-cover bg-center rounded-t-3xl"
-                  style={{ backgroundImage: `url(${room.images[currentImageIndex]})` }}
-                >
-                  <div className="absolute inset-0 bg-black/20 rounded-t-3xl"></div>
-                </div>
+                <img
+                  src={getImageUrl(currentImageIndex)}
+                  alt={room.name}
+                  className="w-full h-full object-cover rounded-t-3xl"
+                />
+                <div className="absolute inset-0 bg-black/20 rounded-t-3xl"></div>
                 
                 {/* Image Navigation */}
-                {room.images.length > 1 && (
+                {imageCount > 1 && (
                   <>
                     <button
                       onClick={prevImage}
@@ -239,7 +131,7 @@ const RoomModal = ({ room, isOpen, onClose }: { room: Room | null; isOpen: boole
                     
                     {/* Image Indicators */}
                     <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">
-                      {room.images.map((_, index) => (
+                      {Array.from({ length: imageCount }).map((_, index) => (
                         <button
                           key={index}
                           onClick={() => setCurrentImageIndex(index)}
@@ -264,11 +156,18 @@ const RoomModal = ({ room, isOpen, onClose }: { room: Room | null; isOpen: boole
               {/* Room Status */}
               <div className="absolute top-4 left-4">
                 <div className={`px-4 py-2 rounded-full text-sm font-medium ${
-                  room.available 
+                  room.status === 'AVAILABLE' 
                     ? 'bg-green-500 text-white' 
+                    : room.status === 'OCCUPIED'
+                    ? 'bg-orange-500 text-white'
                     : 'bg-red-500 text-white'
                 }`}>
-                  {room.available ? 'Disponible' : 'Occupée'}
+                  {room.status === 'AVAILABLE' ? 'Disponible immédiatement' : 
+                   room.status === 'OCCUPIED' ? 
+                   (room.nextAvailableDate ? 
+                    `Disponible le ${new Date(room.nextAvailableDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}` : 
+                    'Occupée') :
+                   'Indisponible'}
                 </div>
               </div>
             </div>
@@ -281,14 +180,14 @@ const RoomModal = ({ room, isOpen, onClose }: { room: Room | null; isOpen: boole
                     {room.name}
                   </h2>
                   <p className="text-gray-600 mb-4">
-                    {room.description}
+                    {room.description || 'Chambre confortable et lumineuse'}
                   </p>
                   <div className="flex items-center gap-4 text-sm text-gray-500">
-                    <span>{room.size}m²</span>
+                    <span>{room.surface}m²</span>
                     <span>•</span>
-                    <span>Meublée</span>
+                    <span>Étage {room.floor}</span>
                     <span>•</span>
-                    <span>Charges incluses</span>
+                    <span>{room.orientation}</span>
                   </div>
                 </div>
                 <div className="text-right">
@@ -301,43 +200,97 @@ const RoomModal = ({ room, isOpen, onClose }: { room: Room | null; isOpen: boole
                 </div>
               </div>
 
-              {/* Full Equipment */}
+              {/* Equipment */}
               <div className="mb-8">
                 <h3 className="text-xl font-bold text-black mb-4">
                   Équipements inclus
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {room.fullEquipment.map((equipment, index) => (
-                    <div key={index} className="flex items-center">
-                      <Check className="w-4 h-4 text-green-600 mr-3 flex-shrink-0" />
-                      <span className="text-gray-700 text-sm">{equipment}</span>
-                    </div>
-                  ))}
+                  <div className="flex items-center">
+                    <Check className={`w-4 h-4 mr-3 flex-shrink-0 ${room.hasPrivateBathroom ? 'text-green-600' : 'text-gray-300'}`} />
+                    <span className={`text-sm ${room.hasPrivateBathroom ? 'text-gray-700' : 'text-gray-400 line-through'}`}>
+                      Salle de bain privée
+                    </span>
+                  </div>
+                  <div className="flex items-center">
+                    <Check className={`w-4 h-4 mr-3 flex-shrink-0 ${room.hasBalcony ? 'text-green-600' : 'text-gray-300'}`} />
+                    <span className={`text-sm ${room.hasBalcony ? 'text-gray-700' : 'text-gray-400 line-through'}`}>
+                      Balcon
+                    </span>
+                  </div>
+                  <div className="flex items-center">
+                    <Check className={`w-4 h-4 mr-3 flex-shrink-0 ${room.hasDesk ? 'text-green-600' : 'text-gray-300'}`} />
+                    <span className={`text-sm ${room.hasDesk ? 'text-gray-700' : 'text-gray-400 line-through'}`}>
+                      Bureau
+                    </span>
+                  </div>
+                  <div className="flex items-center">
+                    <Check className={`w-4 h-4 mr-3 flex-shrink-0 ${room.hasCloset ? 'text-green-600' : 'text-gray-300'}`} />
+                    <span className={`text-sm ${room.hasCloset ? 'text-gray-700' : 'text-gray-400 line-through'}`}>
+                      Placard
+                    </span>
+                  </div>
+                  <div className="flex items-center">
+                    <Check className={`w-4 h-4 mr-3 flex-shrink-0 ${room.hasWindow ? 'text-green-600' : 'text-gray-300'}`} />
+                    <span className={`text-sm ${room.hasWindow ? 'text-gray-700' : 'text-gray-400 line-through'}`}>
+                      Fenêtre
+                    </span>
+                  </div>
+                  <div className="flex items-center">
+                    <Check className={`w-4 h-4 mr-3 flex-shrink-0 ${room.hasTV ? 'text-green-600' : 'text-gray-300'}`} />
+                    <span className={`text-sm ${room.hasTV ? 'text-gray-700' : 'text-gray-400 line-through'}`}>
+                      Télévision
+                    </span>
+                  </div>
+                  <div className="flex items-center">
+                    <Check className={`w-4 h-4 mr-3 flex-shrink-0 ${room.sheetsProvided ? 'text-green-600' : 'text-gray-300'}`} />
+                    <span className={`text-sm ${room.sheetsProvided ? 'text-gray-700' : 'text-gray-400 line-through'}`}>
+                      Draps fournis
+                    </span>
+                  </div>
+                  <div className="flex items-center">
+                    <Check className="w-4 h-4 text-green-600 mr-3 flex-shrink-0" />
+                    <span className="text-gray-700 text-sm">
+                      {room.bedCount} {room.bedType === 'DOUBLE' ? 'lit double' : room.bedType === 'SINGLE' ? 'lit simple' : 'lit(s)'}
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="flex items-center justify-center gap-2 bg-black text-[#F5F3F0] px-6 py-4 rounded-xl font-semibold hover:bg-gray-800 transition-colors"
-                  disabled={!room.available}
-                >
-                  <Calendar className="w-5 h-5" />
-                  {room.available ? 'Réserver' : 'Non disponible'}
-                </motion.button>
+            {/* Action Buttons */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {room.status === 'AVAILABLE' ? (
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="flex items-center justify-center gap-2 bg-black text-[#F5F3F0] px-6 py-4 rounded-xl font-semibold hover:bg-gray-800 transition-colors"
+                    onClick={() => onReserve(room)}
+                  >
+                    <Calendar className="w-5 h-5" />
+                    Réserver maintenant
+                  </motion.button>
+                ) : (
+                  <div className="flex items-center justify-center gap-2 bg-gray-100 text-gray-500 px-6 py-4 rounded-xl font-semibold cursor-not-allowed">
+                    <Calendar className="w-5 h-5" />
+                    {room.status === 'OCCUPIED' ? 
+                      (room.nextAvailableDate ? 
+                        `Disponible le ${new Date(room.nextAvailableDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}` : 
+                        'Occupée') : 
+                      'Non disponible'}
+                  </div>
+                )}
                 
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="flex items-center justify-center gap-2 border-2 border-black text-black px-6 py-4 rounded-xl font-semibold hover:bg-black hover:text-[#F5F3F0] transition-colors"
-                >
-                  <Camera className="w-5 h-5" />
-                  Visite 3D
-                </motion.button>
-                
-                
+                {room.isVirtualTourActive && room.virtualTour && (
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="flex items-center justify-center gap-2 border-2 border-black text-black px-6 py-4 rounded-xl font-semibold hover:bg-black hover:text-[#F5F3F0] transition-colors"
+                    onClick={() => window.open(room.virtualTour, '_blank')}
+                  >
+                    <Camera className="w-5 h-5" />
+                    Visite 3D
+                  </motion.button>
+                )}
               </div>
             </div>
           </motion.div>
@@ -347,9 +300,31 @@ const RoomModal = ({ room, isOpen, onClose }: { room: Room | null; isOpen: boole
   );
 };
 
-const RoomCard = ({ room, index, onViewDetails }: { room: Room; index: number; onViewDetails: (room: Room) => void }) => {
+const RoomCard = ({ room, index, onViewDetails, onReserve }: { room: Room; index: number; onViewDetails: (room: Room) => void; onReserve: (room: Room) => void }) => {
   const cardRef = useRef(null);
   const isInView = useInView(cardRef, { once: true, margin: "-50px" });
+
+  // Image par défaut si pas d'images
+  const getImageUrl = () => {
+    if (!room.images || room.images.length === 0) {
+      return 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?q=80&w=500';
+    }
+    return room.images[0];
+  };
+
+  // Obtenir les features principales
+  const getFeatures = () => {
+    const features = [];
+    if (room.hasPrivateBathroom) features.push('Salle de bain privée');
+    if (room.hasBalcony) features.push('Balcon');
+    if (room.hasDesk) features.push('Bureau');
+    if (features.length === 0) {
+      features.push(`${room.surface}m²`);
+      features.push(`Étage ${room.floor}`);
+      features.push(room.orientation);
+    }
+    return features.slice(0, 3);
+  };
 
   return (
     <motion.div
@@ -358,34 +333,32 @@ const RoomCard = ({ room, index, onViewDetails }: { room: Room; index: number; o
       animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
       transition={{ duration: 0.6, delay: index * 0.1 }}
       whileHover={{ y: -8, transition: { duration: 0.3 } }}
-      className={`group relative bg-white rounded-3xl overflow-hidden shadow-sm border transition-all duration-300 hover:shadow-xl ${
-        room.isHighlight 
-          ? 'border-black ring-2 ring-black/5' 
-          : 'border-gray-200 hover:border-gray-300'
-      }`}
+      className={`group relative bg-white rounded-3xl overflow-hidden shadow-sm border transition-all duration-300 hover:shadow-xl border-gray-200 hover:border-gray-300`}
     >
-      {room.isHighlight && (
-        <div className="absolute -top-3 left-6 bg-black text-[#F5F3F0] px-4 py-1 rounded-full text-sm font-medium z-10">
-          Premium
-        </div>
-      )}
-
       {/* Image */}
       <div className="relative h-48 overflow-hidden">
-        <div 
-          className="w-full h-full bg-cover bg-center transition-transform duration-300 group-hover:scale-105"
-          style={{ backgroundImage: `url(${room.images[0]})` }}
-        >
-          <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors"></div>
-        </div>
+        <img
+          src={getImageUrl()}
+          alt={room.name}
+          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            target.src = 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?q=80&w=500';
+          }}
+        />
+        <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors"></div>
         
         <div className="absolute top-4 right-4">
           <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-            room.available 
+            room.status === 'AVAILABLE' 
               ? 'bg-green-500 text-white' 
+              : room.status === 'OCCUPIED'
+              ? 'bg-orange-500 text-white'
               : 'bg-red-500 text-white'
           }`}>
-            {room.available ? 'Disponible' : 'Occupée'}
+            {room.status === 'AVAILABLE' ? 'Disponible' : 
+             room.status === 'OCCUPIED' ? 'Occupée' :
+             'Indisponible'}
           </div>
         </div>
       </div>
@@ -397,7 +370,12 @@ const RoomCard = ({ room, index, onViewDetails }: { room: Room; index: number; o
             <h3 className="text-xl font-bold text-black mb-1 group-hover:text-gray-700 transition-colors">
               {room.name}
             </h3>
-            <p className="text-gray-600 text-sm">{room.size}m²</p>
+            <p className="text-gray-600 text-sm">{room.surface}m²</p>
+            {room.status === 'OCCUPIED' && room.nextAvailableDate && (
+              <p className="text-orange-600 text-xs mt-1">
+                Disponible le {new Date(room.nextAvailableDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+              </p>
+            )}
           </div>
           <div className="text-right">
             <div className="text-2xl font-bold text-black">
@@ -410,7 +388,7 @@ const RoomCard = ({ room, index, onViewDetails }: { room: Room; index: number; o
         </div>
 
         <ul className="space-y-2 mb-6">
-          {room.features.map((feature, idx) => (
+          {getFeatures().map((feature, idx) => (
             <li key={idx} className="flex items-center text-sm text-gray-700">
               <Check className="w-4 h-4 text-green-600 mr-3 flex-shrink-0" />
               {feature}
@@ -430,19 +408,22 @@ const RoomCard = ({ room, index, onViewDetails }: { room: Room; index: number; o
             Détails
           </motion.button>
           
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition-colors text-sm ${
-              room.available
-                ? 'bg-black text-[#F5F3F0] hover:bg-gray-800'
-                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-            }`}
-            disabled={!room.available}
-          >
-            <Calendar className="w-4 h-4" />
-            {room.available ? 'Réserver' : 'Occupée'}
-          </motion.button>
+          {room.status === 'AVAILABLE' ? (
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => onReserve(room)}
+              className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium transition-colors text-sm bg-black text-[#F5F3F0] hover:bg-gray-800"
+            >
+              <Calendar className="w-4 h-4" />
+              Réserver
+            </motion.button>
+          ) : (
+            <div className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium text-sm bg-gray-100 text-gray-500 cursor-not-allowed">
+              <Calendar className="w-4 h-4" />
+              {room.status === 'OCCUPIED' ? 'Occupée' : 'Indisponible'}
+            </div>
+          )}
         </div>
       </div>
     </motion.div>
@@ -454,8 +435,42 @@ export const RoomsSection = () => {
   const isInView = useInView(sectionRef, { once: true, margin: "-100px" });
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [bookingRoom, setBookingRoom] = useState<Room | null>(null);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const availableRooms = rooms.filter(room => room.available).length;
+  // Récupérer les chambres depuis la DB
+  useEffect(() => {
+    fetchRooms();
+  }, []);
+
+  const fetchRooms = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await fetch('/api/rooms');
+      const data = await response.json();
+      
+      if (data.success) {
+        // Afficher toutes les chambres actives (disponibles ET occupées)
+        const activeRooms = data.data.filter((room: Room) => room.isActive);
+        setRooms(activeRooms);
+      } else {
+        throw new Error(data.error || 'Erreur lors du chargement');
+      }
+    } catch (err) {
+      console.error('Erreur lors du chargement des chambres:', err);
+      setError('Impossible de charger les chambres');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const availableRooms = rooms.filter(room => room.status === 'AVAILABLE').length;
+  const totalRooms = rooms.length;
 
   const handleViewDetails = (room: Room) => {
     setSelectedRoom(room);
@@ -482,18 +497,20 @@ export const RoomsSection = () => {
             transition={{ duration: 0.8 }}
             className="text-center mb-12 lg:mb-16"
           >
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={isInView ? { scale: 1 } : { scale: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="inline-flex items-center gap-2 bg-white px-4 py-2 rounded-full text-sm font-medium text-gray-600 mb-6"
-            >
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              {availableRooms} chambres disponibles sur 9
-            </motion.div>
+            {totalRooms > 0 && (
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={isInView ? { scale: 1 } : { scale: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                className="inline-flex items-center gap-2 bg-white px-4 py-2 rounded-full text-sm font-medium text-gray-600 mb-6"
+              >
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                {availableRooms} chambre{availableRooms > 1 ? 's' : ''} disponible{availableRooms > 1 ? 's' : ''} sur {totalRooms}
+              </motion.div>
+            )}
             
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-black mb-6 leading-tight">
-              Nos 9 chambres
+              Nos chambres
               <br />
               <span className="relative text-gray-600">
                 uniques
@@ -512,17 +529,47 @@ export const RoomsSection = () => {
             </p>
           </motion.div>
 
-          {/* Rooms Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 mb-16">
-            {rooms.map((room, index) => (
-              <RoomCard 
-                key={room.id} 
-                room={room} 
-                index={index} 
-                onViewDetails={handleViewDetails}
-              />
-            ))}
-          </div>
+          {/* Content */}
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-20">
+              <Loader2 className="w-12 h-12 animate-spin text-gray-400 mb-4" />
+              <p className="text-gray-600">Chargement des chambres...</p>
+            </div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center py-20">
+              <AlertCircle className="w-12 h-12 text-red-400 mb-4" />
+              <p className="text-gray-600 mb-4">{error}</p>
+              <button
+                onClick={fetchRooms}
+                className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Réessayer
+              </button>
+            </div>
+          ) : rooms.length === 0 ? (
+            <div className="text-center py-20">
+              <p className="text-gray-600">Aucune chambre disponible pour le moment.</p>
+            </div>
+          ) : (
+            <>
+              {/* Rooms Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 mb-16">
+                {rooms.map((room, index) => (
+                  <RoomCard 
+                    key={room.id} 
+                    room={room} 
+                    index={index} 
+                    onViewDetails={handleViewDetails}
+                    onReserve={(room) => {
+                      setBookingRoom(room);
+                      setIsBookingModalOpen(true);
+                    }}
+                  />
+                ))}
+              </div>
+            </>
+          )}
 
           {/* Common Spaces */}
           <motion.div
@@ -575,7 +622,26 @@ export const RoomsSection = () => {
         room={selectedRoom}
         isOpen={isModalOpen}
         onClose={closeModal}
+        onReserve={(room) => {
+          setBookingRoom(room);
+          setIsBookingModalOpen(true);
+          setIsModalOpen(false);
+        }}
       />
+      
+      {/* Booking Modal */}
+      {bookingRoom && (
+        <BookingModal
+          isOpen={isBookingModalOpen}
+          onClose={() => {
+            setIsBookingModalOpen(false);
+            setBookingRoom(null);
+          }}
+          roomId={bookingRoom.id}
+          roomName={bookingRoom.name}
+          roomPrice={bookingRoom.price}
+        />
+      )}
     </>
   );
 };

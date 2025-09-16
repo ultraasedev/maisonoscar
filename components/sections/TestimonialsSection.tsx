@@ -1,8 +1,9 @@
 'use client';
 
 import { motion, useInView, AnimatePresence } from 'framer-motion';
-import { Star, ChevronLeft, ChevronRight, Quote } from 'lucide-react';
+import { Star, ChevronLeft, ChevronRight, Quote, MessageSquare } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
+import ReviewModal from '@/components/ReviewModal';
 
 interface Testimonial {
   name: string;
@@ -171,6 +172,8 @@ export const TestimonialsSection = () => {
     setIsAutoPlaying(false);
   };
 
+  const [showReviewModal, setShowReviewModal] = useState(false);
+
   return (
     <section 
       ref={sectionRef}
@@ -298,12 +301,20 @@ export const TestimonialsSection = () => {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="bg-black text-[#F5F3F0] px-8 py-4 rounded-xl font-semibold hover:bg-gray-800 transition-colors"
+            onClick={() => setShowReviewModal(true)}
+            className="bg-black text-[#F5F3F0] px-8 py-4 rounded-xl font-semibold hover:bg-gray-800 transition-colors inline-flex items-center gap-2"
           >
-            Rejoindre la communauté
+            <MessageSquare className="w-5 h-5" />
+            Publier un avis
           </motion.button>
         </motion.div>
       </div>
+
+      {/* Review Modal */}
+      <ReviewModal 
+        isOpen={showReviewModal} 
+        onClose={() => setShowReviewModal(false)} 
+      />
     </section>
   );
 };

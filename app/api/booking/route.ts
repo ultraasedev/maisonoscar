@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { rateLimitConfigs } from '@/lib/rate-limit'
 import type { 
   BookingWithRelations, 
   BookingStats, 
@@ -177,6 +178,26 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // Appliquer le rate limiting
+    const rateLimitResult = await rateLimitConfigs.booking(request);
+    
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Trop de demandes de réservation. Veuillez réessayer plus tard.',
+          retryAfter: rateLimitResult.retryAfter
+        },
+        { 
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 3600),
+            'X-RateLimit-Remaining': String(rateLimitResult.remaining)
+          }
+        }
+      );
+    }
+    
     const body = await request.json()
     
     // Validation des données
@@ -272,15 +293,14 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Créer les paiements associés si nécessaire
     if (validatedData.securityDeposit > 0) {
       await prisma.payment.create({
         data: {
-          userId: validatedData.userId,
+          userId: validatedData.userId,        // ✅ GARDÉ : Maintenant dans le schema Payment
           bookingId: booking.id,
           amount: validatedData.securityDeposit,
           dueDate: validatedData.startDate,
-          paymentType: 'SECURITY_DEPOSIT',
+          paymentType: 'DEPOSIT',              // ✅ CORRIGÉ : DEPOSIT au lieu de SECURITY_DEPOSIT
           status: 'PENDING'
         }
       })

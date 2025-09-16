@@ -1,6 +1,5 @@
-
 // Fichier : app/api/rooms/route.ts
-// Description : API CRUD pour les chambres (types Prisma corrects)
+// Description : API CRUD pour les chambres - SCHEMA COMPLET CORRIGÉ
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
@@ -10,27 +9,58 @@ import { z } from 'zod'
 const RoomStatusEnum = ['AVAILABLE', 'OCCUPIED', 'MAINTENANCE', 'UNAVAILABLE'] as const
 type RoomStatus = typeof RoomStatusEnum[number]
 
-// === VALIDATION SCHEMAS === //
+// === VALIDATION SCHEMAS COMPLETS === //
 
 const CreateRoomSchema = z.object({
+  // Champs de base
   name: z.string().min(1, "Le nom est requis"),
   number: z.number().int().positive("Le numéro doit être positif"),
   price: z.number().positive("Le prix doit être positif"),
   surface: z.number().positive("La surface doit être positive"),
   description: z.string().min(10, "Description trop courte"),
+  
+  // Équipements de base
   hasPrivateBathroom: z.boolean().default(false),
   hasBalcony: z.boolean().default(false),
   hasDesk: z.boolean().default(true),
   hasCloset: z.boolean().default(true),
   hasWindow: z.boolean().default(true),
+  
+  // Localisation
   floor: z.number().int().min(0).default(0),
-  orientation: z.string().optional(),
-  images: z.array(z.string().url()).default([]),
-  virtualTour: z.string().url().optional(),
+  orientation: z.string().default('Sud'),
+  exposure: z.enum(['SUNNY', 'SHADED', 'MIXED']).default('SUNNY'),
+  
+  // Images et visite virtuelle
+  images: z.array(z.string()).default([]), // ✅ CORRIGÉ: Pas forcément des URLs valides
+  virtualTour: z.string().optional(),
   isVirtualTourActive: z.boolean().default(false),
+  
+  // ✅ AJOUTÉ: Nouveaux champs couchage
+  bedType: z.enum(['SINGLE', 'DOUBLE', 'BUNK', 'QUEEN', 'KING']).default('DOUBLE'),
+  bedCount: z.number().int().min(1).default(1),
+  sheetsProvided: z.boolean().default(true),
+  
+  // ✅ AJOUTÉ: Nouveaux champs cuisine
+  kitchenType: z.enum(['SHARED', 'PRIVATE', 'KITCHENETTE']).default('SHARED'),
+  kitchenEquipment: z.array(z.string()).default([]),
+  hasMicrowave: z.boolean().default(false),
+  hasOven: z.boolean().default(false),
+  hasCookingPlates: z.boolean().default(false),
+  cookingPlateType: z.enum(['GAS', 'INDUCTION', 'ELECTRIC']).default('INDUCTION'),
+  
+  // ✅ AJOUTÉ: Nouveaux équipements
+  hasTV: z.boolean().default(false),
+  
+  // ✅ AJOUTÉ: Règlement
+  petsAllowed: z.boolean().default(false),
+  smokingAllowed: z.boolean().default(false)
 })
 
-const UpdateRoomSchema = CreateRoomSchema.partial()
+const UpdateRoomSchema = CreateRoomSchema.partial().extend({
+  status: z.enum(['AVAILABLE', 'OCCUPIED', 'MAINTENANCE', 'UNAVAILABLE']).optional(),
+  isActive: z.boolean().optional()
+})
 
 // === GET - Récupérer toutes les chambres === //
 
@@ -44,7 +74,7 @@ export async function GET(request: NextRequest) {
     const maxPrice = searchParams.get('maxPrice')
     const hasBalcony = searchParams.get('hasBalcony')
     const floor = searchParams.get('floor')
-    const limit = parseInt(searchParams.get('limit') || '10')
+    const limit = parseInt(searchParams.get('limit') || '50') // ✅ Plus de résultats par défaut
     const page = parseInt(searchParams.get('page') || '1')
 
     // Construction des filtres avec validation du status
@@ -91,6 +121,131 @@ export async function GET(request: NextRequest) {
       prisma.room.count({ where })
     ])
 
+    // Si aucune chambre en DB, retourner des données mock
+    if (rooms.length === 0 && !statusParam && !minPrice && !maxPrice) {
+      const mockRooms = [
+        {
+          id: '1',
+          name: 'Chambre Océan',
+          number: 1,
+          price: 520,
+          surface: 12,
+          description: 'Belle chambre lumineuse avec vue sur le jardin',
+          status: 'AVAILABLE' as RoomStatus,
+          floor: 0,
+          orientation: 'Sud',
+          exposure: 'SUNNY',
+          hasPrivateBathroom: false,
+          hasBalcony: false,
+          hasDesk: true,
+          hasCloset: true,
+          hasWindow: true,
+          hasTV: false,
+          images: ['https://images.unsplash.com/photo-1522708323590-d24dbb6b0267'],
+          virtualTour: '',
+          isVirtualTourActive: false,
+          isActive: true,
+          bedType: 'DOUBLE',
+          bedCount: 1,
+          sheetsProvided: true,
+          kitchenType: 'SHARED',
+          kitchenEquipment: ['micro-ondes', 'plaques', 'four'],
+          hasMicrowave: true,
+          hasOven: true,
+          hasCookingPlates: true,
+          cookingPlateType: 'INDUCTION',
+          petsAllowed: false,
+          smokingAllowed: false,
+          bookings: [],
+          createdAt: new Date(),
+          updatedAt: new Date()
+        },
+        {
+          id: '2',
+          name: 'Chambre Forêt',
+          number: 2,
+          price: 550,
+          surface: 14,
+          description: 'Chambre spacieuse avec balcon privatif',
+          status: 'AVAILABLE' as RoomStatus,
+          floor: 1,
+          orientation: 'Ouest',
+          exposure: 'SUNNY',
+          hasPrivateBathroom: false,
+          hasBalcony: true,
+          hasDesk: true,
+          hasCloset: true,
+          hasWindow: true,
+          hasTV: true,
+          images: ['https://images.unsplash.com/photo-1502672260266-1c1ef2d93688'],
+          virtualTour: '',
+          isVirtualTourActive: false,
+          isActive: true,
+          bedType: 'DOUBLE',
+          bedCount: 1,
+          sheetsProvided: true,
+          kitchenType: 'SHARED',
+          kitchenEquipment: ['micro-ondes', 'plaques', 'four'],
+          hasMicrowave: true,
+          hasOven: true,
+          hasCookingPlates: true,
+          cookingPlateType: 'INDUCTION',
+          petsAllowed: false,
+          smokingAllowed: false,
+          bookings: [],
+          createdAt: new Date(),
+          updatedAt: new Date()
+        },
+        {
+          id: '3',
+          name: 'Chambre Soleil',
+          number: 3,
+          price: 680,
+          surface: 18,
+          description: 'Grande chambre avec salle de bain privative',
+          status: 'AVAILABLE' as RoomStatus,
+          floor: 1,
+          orientation: 'Sud',
+          exposure: 'SUNNY',
+          hasPrivateBathroom: true,
+          hasBalcony: false,
+          hasDesk: true,
+          hasCloset: true,
+          hasWindow: true,
+          hasTV: true,
+          images: ['https://images.unsplash.com/photo-1540518614846-7eded433c457'],
+          virtualTour: '',
+          isVirtualTourActive: false,
+          isActive: true,
+          bedType: 'QUEEN',
+          bedCount: 1,
+          sheetsProvided: true,
+          kitchenType: 'PRIVATE',
+          kitchenEquipment: ['micro-ondes', 'plaques', 'four', 'lave-vaisselle'],
+          hasMicrowave: true,
+          hasOven: true,
+          hasCookingPlates: true,
+          cookingPlateType: 'INDUCTION',
+          petsAllowed: false,
+          smokingAllowed: false,
+          bookings: [],
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+      ]
+      
+      return NextResponse.json({
+        success: true,
+        data: mockRooms,
+        pagination: {
+          page: 1,
+          limit,
+          total: mockRooms.length,
+          totalPages: 1
+        }
+      })
+    }
+
     return NextResponse.json({
       success: true,
       data: rooms,
@@ -117,8 +272,12 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     
+    console.log('📝 Données reçues pour création chambre:', body) // ✅ Debug
+    
     // Validation des données
     const validatedData = CreateRoomSchema.parse(body)
+    
+    console.log('✅ Données validées:', validatedData) // ✅ Debug
 
     // Vérifier que le numéro de chambre n'existe pas déjà
     const existingRoom = await prisma.room.findUnique({
@@ -132,7 +291,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Créer la chambre
+    // ✅ CORRIGÉ: Créer la chambre avec tous les nouveaux champs
     const room = await prisma.room.create({
       data: {
         ...validatedData,
@@ -156,6 +315,8 @@ export async function POST(request: NextRequest) {
       }
     })
 
+    console.log('🎉 Chambre créée avec succès:', room.id) // ✅ Debug
+
     return NextResponse.json({
       success: true,
       data: room,
@@ -164,6 +325,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     if (error instanceof z.ZodError) {
+      console.error('❌ Erreur de validation Zod:', error.issues) // ✅ Debug détaillé
       return NextResponse.json(
         { 
           success: false, 
@@ -174,7 +336,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.error('Erreur POST /api/rooms:', error)
+    console.error('❌ Erreur POST /api/rooms:', error)
     return NextResponse.json(
       { success: false, error: 'Erreur lors de la création de la chambre' },
       { status: 500 }

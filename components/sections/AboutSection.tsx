@@ -2,7 +2,7 @@
 
 import { motion, useInView } from 'framer-motion';
 import { Home, Users, Heart, Sparkles } from 'lucide-react';
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
 
 const features = [
   {
@@ -34,6 +34,21 @@ const features = [
 export const AboutSection = () => {
   const sectionRef = useRef(null);
   const isInView = useInView(sectionRef, { once: true, margin: "-100px" });
+  const [roomStats, setRoomStats] = useState({ total: 0, available: 0 });
+
+  useEffect(() => {
+    // Récupérer les stats des chambres depuis l'API
+    fetch('/api/rooms')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.data) {
+          const total = data.data.length;
+          const available = data.data.filter((room: any) => room.status === 'AVAILABLE').length;
+          setRoomStats({ total, available });
+        }
+      })
+      .catch(console.error);
+  }, []);
 
   return (
     <section 
@@ -141,7 +156,7 @@ export const AboutSection = () => {
               className="absolute -bottom-6 -right-6 bg-black text-[#F5F3F0] rounded-2xl p-6 shadow-xl"
             >
               <div className="text-center">
-                <div className="text-3xl font-bold mb-1">9</div>
+                <div className="text-3xl font-bold mb-1">{roomStats.total || 0}</div>
                 <div className="text-sm opacity-80">Chambres</div>
               </div>
             </motion.div>
@@ -154,7 +169,7 @@ export const AboutSection = () => {
             >
               <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <span className="text-sm font-medium text-black">6 disponibles</span>
+                <span className="text-sm font-medium text-black">{roomStats.available || 0} disponible{roomStats.available > 1 ? 's' : ''}</span>
               </div>
             </motion.div>
           </motion.div>

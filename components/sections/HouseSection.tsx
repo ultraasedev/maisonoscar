@@ -1,85 +1,112 @@
 'use client';
 
 import { motion, useInView } from 'framer-motion';
-import { Home, Trees, Car, Train, Wifi, MapPin, Calendar, Camera } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { Home, Trees, Car, Train, Camera, Play, Bike } from 'lucide-react';
+import { useRef, useState, useEffect } from 'react';
+
+const defaultContent = {
+  title: 'Notre maison à Bruz',
+  description: 'Une maison moderne de 180m² entièrement rénovée, située dans un quartier calme à 15 minutes de Rennes en transport.',
+  features: [
+    {
+      title: '180m²',
+      description: 'Surface habitable généreuse'
+    },
+    {
+      title: 'Jardin',
+      description: 'Espace extérieur privatif'
+    },
+    {
+      title: 'Parking',
+      description: 'Places dédiées incluses'
+    },
+    {
+      title: 'Transport',
+      description: 'Métro B ligne directe'
+    }
+  ],
+  address: '123 rue de la République, 35170 Bruz',
+  virtualTourUrl: 'https://my.matterport.com/show/?m=example', // URL par défaut
+  isVirtualTourActive: true
+};
+
+const fadeInUp = {
+  hidden: { opacity: 0, y: 30 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } }
+};
+
+const staggerContainer = {
+  hidden: { opacity: 1 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.2
+    }
+  }
+};
+
+const hoverLift = {
+  hover: { 
+    y: -8, 
+    transition: { duration: 0.3 } 
+  }
+};
 
 const houseFeatures = [
   {
     icon: Home,
     title: '180m²',
     description: 'Surface habitable généreuse',
-    detail: 'Espace de vie optimisé avec 9 chambres et de nombreux espaces communs'
+    color: 'bg-blue-100 text-blue-600'
   },
   {
     icon: Trees,
-    title: 'Jardin privatif',
-    description: 'Espace extérieur de 150m²',
-    detail: 'Terrasse, barbecue et espace détente pour profiter des beaux jours'
+    title: 'Jardin',
+    description: 'Espace extérieur privatif',
+    color: 'bg-green-100 text-green-600'
   },
   {
     icon: Car,
-    title: 'Parking sécurisé',
-    description: '6 places incluses',
-    detail: 'Stationnement gratuit et sécurisé pour tous les résidents'
+    title: 'Parking',
+    description: 'Places dédiées incluses',
+    color: 'bg-purple-100 text-purple-600'
   },
   {
     icon: Train,
     title: 'Transport',
-    description: 'Métro B à 5 min à pied',
-    detail: 'Accès direct au centre de Rennes en 15 minutes'
+    description: 'Métro B ligne directe',
+    color: 'bg-orange-100 text-orange-600'
   }
 ];
 
-const amenities = [
+// Removed bike amenity as requested
+
+const galleryImages = [
   {
-    icon: Wifi,
-    title: 'Fibre optique',
-    description: '1 Gb/s inclus'
+    src: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?q=80&w=1000',
+    alt: 'Façade Maison Oscar Bruz',
+    className: 'lg:col-span-2 lg:row-span-2'
   },
   {
-    icon: Home,
-    title: 'Cuisine moderne',
-    description: 'Entièrement équipée'
+    src: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?q=80&w=500',
+    alt: 'Salon moderne',
+    className: ''
   },
   {
-    icon: Trees,
-    title: 'Espaces verts',
-    description: 'Jardin et terrasses'
+    src: 'https://images.unsplash.com/photo-1565538810643-b5bdb714032a?q=80&w=500',
+    alt: 'Cuisine équipée',
+    className: ''
   },
   {
-    icon: Car,
-    title: 'Vélos disponibles',
-    description: 'Service gratuit'
+    src: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?q=80&w=800',
+    alt: 'Jardin privatif',
+    className: 'md:col-span-2'
   }
 ];
 
 const GalleryModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
   const [currentImage, setCurrentImage] = useState(0);
   
-  const images = [
-    {
-      url: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?q=80&w=1000',
-      title: 'Façade de la maison',
-      description: 'Architecture moderne dans un quartier calme'
-    },
-    {
-      url: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?q=80&w=800',
-      title: 'Salon principal',
-      description: 'Espace de détente partagé avec TV grand écran'
-    },
-    {
-      url: 'https://images.unsplash.com/photo-1556909264-f2d94d4cd0ae?q=80&w=800',
-      title: 'Cuisine équipée',
-      description: 'Espace de vie central pour cuisiner ensemble'
-    },
-    {
-      url: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?q=80&w=800',
-      title: 'Jardin privatif',
-      description: 'Espace extérieur avec terrasse et barbecue'
-    }
-  ];
-
   if (!isOpen) return null;
 
   return (
@@ -94,34 +121,26 @@ const GalleryModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
         initial={{ scale: 0.9 }}
         animate={{ scale: 1 }}
         exit={{ scale: 0.9 }}
-        className="max-w-4xl w-full"
+        className="max-w-5xl w-full"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="relative">
           <img
-            src={images[currentImage].url}
-            alt={images[currentImage].title}
-            className="w-full h-auto rounded-2xl"
+            src={galleryImages[currentImage].src}
+            alt={galleryImages[currentImage].alt}
+            className="w-full h-auto rounded-2xl max-h-[80vh] object-contain"
           />
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6 rounded-b-2xl">
-            <h3 className="text-white text-xl font-bold mb-2">
-              {images[currentImage].title}
-            </h3>
-            <p className="text-gray-300 text-sm">
-              {images[currentImage].description}
-            </p>
-          </div>
           
           {/* Navigation */}
           <button
-            onClick={() => setCurrentImage((prev) => (prev - 1 + images.length) % images.length)}
-            className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors"
+            onClick={() => setCurrentImage((prev) => (prev - 1 + galleryImages.length) % galleryImages.length)}
+            className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors text-black font-bold text-lg"
           >
             ←
           </button>
           <button
-            onClick={() => setCurrentImage((prev) => (prev + 1) % images.length)}
-            className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors"
+            onClick={() => setCurrentImage((prev) => (prev + 1) % galleryImages.length)}
+            className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors text-black font-bold text-lg"
           >
             →
           </button>
@@ -129,22 +148,29 @@ const GalleryModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
           {/* Close button */}
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 w-10 h-10 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors"
+            className="absolute top-4 right-4 w-12 h-12 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors text-black text-xl"
           >
             ✕
           </button>
           
           {/* Indicators */}
-          <div className="absolute bottom-20 left-1/2 -translate-x-1/2 flex space-x-2">
-            {images.map((_, index) => (
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex space-x-2">
+            {galleryImages.map((_, index) => (
               <button
                 key={index}
                 onClick={() => setCurrentImage(index)}
-                className={`w-2 h-2 rounded-full transition-all ${
-                  index === currentImage ? 'bg-white w-6' : 'bg-white/50'
+                className={`w-3 h-3 rounded-full transition-all ${
+                  index === currentImage ? 'bg-white w-8' : 'bg-white/50 hover:bg-white/70'
                 }`}
               />
             ))}
+          </div>
+          
+          {/* Caption */}
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-8 rounded-b-2xl">
+            <p className="text-white text-lg font-medium text-center">
+              {galleryImages[currentImage].alt}
+            </p>
           </div>
         </div>
       </motion.div>
@@ -154,203 +180,173 @@ const GalleryModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
 
 export const HouseSection = () => {
   const sectionRef = useRef(null);
-  const isInView = useInView(sectionRef, { once: true, margin: "-100px" });
-  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [showGallery, setShowGallery] = useState(false);
+  const [content, setContent] = useState(defaultContent);
+  const [galleryStartIndex, setGalleryStartIndex] = useState(0);
+  const [virtualTourConfig, setVirtualTourConfig] = useState({
+    url: '',
+    isActive: true
+  });
+
+  useEffect(() => {
+    const loadContent = async () => {
+      try {
+        // Charger le contenu CMS
+        const response = await fetch('/api/cms/sections');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data?.house) {
+            setContent({
+              ...defaultContent,
+              ...data.data.house
+            });
+          }
+        }
+        
+        // Charger la config visite virtuelle depuis les rooms
+        const roomsResponse = await fetch('/api/rooms?limit=1');
+        if (roomsResponse.ok) {
+          const roomsData = await roomsResponse.json();
+          if (roomsData.success && roomsData.data?.[0]) {
+            setVirtualTourConfig({
+              url: roomsData.data[0].virtualTour || '',
+              isActive: roomsData.data[0].isVirtualTourActive || false
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load content:', error);
+      }
+    };
+
+    loadContent();
+  }, []);
 
   return (
     <>
-      <section 
+      <motion.section 
         ref={sectionRef}
         id="maison"
-        className="py-16 lg:py-24 bg-white"
+        className="py-20 bg-white"
+        variants={staggerContainer}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Header */}
-          <motion.div 
-            initial={{ opacity: 0, y: 30 }}
-            animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
-            transition={{ duration: 0.8 }}
-            className="text-center mb-12 lg:mb-16"
-          >
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={isInView ? { scale: 1 } : { scale: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="inline-flex items-center gap-2 bg-[#F5F3F0] px-4 py-2 rounded-full text-sm font-medium text-black mb-6"
-            >
-              <MapPin className="w-4 h-4" />
-              Bruz, Bretagne
-            </motion.div>
-
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-black mb-6 leading-tight">
-              Notre maison
-              <br />
-              <span className="relative text-gray-600">
-                à Bruz
-                <motion.div
-                  initial={{ scaleX: 0 }}
-                  animate={isInView ? { scaleX: 1 } : { scaleX: 0 }}
-                  transition={{ duration: 1, delay: 0.8 }}
-                  className="absolute bottom-2 left-0 w-full h-1 bg-black rounded-full origin-left"
-                />
-              </span>
+          <motion.div variants={fadeInUp} className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+              {content.title}
             </h2>
-            
-            <p className="text-lg lg:text-xl text-gray-700 max-w-3xl mx-auto leading-relaxed">
-              Une maison moderne de 180m² entièrement rénovée, située dans un quartier calme 
-              à 15 minutes de Rennes en transport en commun.
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              {content.description}
             </p>
           </motion.div>
 
-          {/* Main Image + Quick Actions */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
-            transition={{ duration: 0.8, delay: 0.3 }}
-            className="relative mb-16"
+          {/* Galerie avec indication claire */}
+          <motion.div 
+            variants={fadeInUp}
+            className="mb-16"
           >
-            <div className="relative rounded-3xl overflow-hidden shadow-2xl aspect-[16/9] lg:aspect-[21/9]">
-              <div 
-                className="w-full h-full bg-cover bg-center"
-                style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1564013799919-ab600027ffc6?q=80&w=1000)' }}
-              >
-                <div className="absolute inset-0 bg-black/20"></div>
-              </div>
-              
-              {/* Overlay Actions */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center text-white">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-2xl font-bold text-gray-900">Découvrir la maison</h3>
+              <div className="flex gap-4">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setShowGallery(true)}
+                  className="flex items-center gap-2 bg-black text-white px-6 py-3 rounded-xl font-semibold hover:bg-gray-800 transition-colors"
+                >
+                  <Camera className="w-5 h-5" />
+                  Voir toutes les photos
+                </motion.button>
+                
+                {virtualTourConfig.isActive && virtualTourConfig.url && (
                   <motion.button
-                    onClick={() => setGalleryOpen(true)}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className="bg-white/90 text-black px-6 py-3 rounded-xl font-semibold hover:bg-white transition-colors flex items-center gap-2 mx-auto mb-4"
+                    onClick={() => window.open(virtualTourConfig.url, '_blank')}
+                    className="flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-green-700 transition-colors"
                   >
-                    <Camera className="w-5 h-5" />
-                    Voir toutes les photos
+                    <Play className="w-5 h-5" />
+                    Visite virtuelle 360°
                   </motion.button>
-                  <p className="text-white/80 text-sm">
-                    Découvrez tous nos espaces en images
-                  </p>
-                </div>
+                )}
               </div>
             </div>
+            
+            <motion.div 
+              variants={staggerContainer}
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+            >
+              {galleryImages.map((image, index) => (
+                <motion.div 
+                  key={index}
+                  variants={fadeInUp}
+                  whileHover="hover"
+                  className={`${image.className} cursor-pointer relative group`}
+                  onClick={() => {
+                    setGalleryStartIndex(index);
+                    setShowGallery(true);
+                  }}
+                >
+                  <motion.div variants={hoverLift} className="h-full relative">
+                    <img
+                      src={image.src}
+                      alt={image.alt}
+                      className={`w-full object-cover rounded-2xl shadow-lg ${
+                        index === 0 ? 'h-full min-h-[400px]' : 'h-48'
+                      }`}
+                    />
+                    {/* Overlay au hover */}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300 rounded-2xl flex items-center justify-center">
+                      <Camera className="w-12 h-12 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    </div>
+                  </motion.div>
+                </motion.div>
+              ))}
+            </motion.div>
           </motion.div>
 
-          {/* Features Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 mb-16">
+          {/* Caractéristiques */}
+          <motion.div 
+            variants={staggerContainer}
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12"
+          >
             {houseFeatures.map((feature, index) => {
               const Icon = feature.icon;
               return (
                 <motion.div 
                   key={index}
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
-                  transition={{ duration: 0.6, delay: 0.4 + index * 0.1 }}
-                  whileHover={{ y: -5, transition: { duration: 0.2 } }}
-                  className="bg-[#F5F3F0] rounded-3xl p-6 lg:p-8 text-center group cursor-pointer"
+                  variants={fadeInUp}
+                  whileHover="hover"
+                  className="cursor-pointer"
                 >
-                  <div className="w-16 h-16 bg-black rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                    <Icon className="w-8 h-8 text-[#F5F3F0]" />
-                  </div>
-                  <h3 className="text-xl font-bold text-black mb-2">
-                    {feature.title}
-                  </h3>
-                  <p className="text-gray-600 mb-3">
-                    {feature.description}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    {feature.detail}
-                  </p>
+                  <motion.div 
+                    variants={hoverLift}
+                    className="text-center p-6 bg-gray-50 rounded-2xl h-full hover:bg-gray-100 transition-colors"
+                  >
+                    <div className={`w-16 h-16 ${feature.color} rounded-2xl flex items-center justify-center mx-auto mb-4`}>
+                      <Icon className="w-8 h-8" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                      {feature.title}
+                    </h3>
+                    <p className="text-gray-600">
+                      {feature.description}
+                    </p>
+                  </motion.div>
                 </motion.div>
               );
             })}
-          </div>
-
-          {/* Amenities Section */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
-            transition={{ duration: 0.8, delay: 0.6 }}
-            className="bg-black rounded-3xl p-8 lg:p-12 text-[#F5F3F0]"
-          >
-            <div className="text-center mb-12">
-              <h3 className="text-2xl lg:text-3xl font-bold mb-4">
-                Équipements inclus
-              </h3>
-              <p className="text-gray-300 max-w-2xl mx-auto">
-                Tous les services pour votre confort quotidien, 
-                sans frais supplémentaires.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
-              {amenities.map((amenity, index) => {
-                const Icon = amenity.icon;
-                return (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.8 }}
-                    transition={{ duration: 0.5, delay: 0.8 + index * 0.1 }}
-                    whileHover={{ scale: 1.05 }}
-                    className="text-center group"
-                  >
-                    <div className="w-12 h-12 lg:w-16 lg:h-16 bg-[#F5F3F0] rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:bg-gray-200 transition-colors">
-                      <Icon className="w-6 h-6 lg:w-8 lg:h-8 text-black" />
-                    </div>
-                    <h4 className="font-bold text-[#F5F3F0] mb-2 text-sm lg:text-base">
-                      {amenity.title}
-                    </h4>
-                    <p className="text-gray-300 text-xs lg:text-sm">
-                      {amenity.description}
-                    </p>
-                  </motion.div>
-                );
-              })}
-            </div>
           </motion.div>
-
-          {/* CTA Section */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
-            transition={{ duration: 0.8, delay: 0.8 }}
-            className="text-center mt-16"
-          >
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-3xl mx-auto">
           
-              
-              <motion.button
-                onClick={() => setGalleryOpen(true)}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                 className="bg-black text-[#F5F3F0] px-6 py-4 rounded-xl font-semibold hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
-              >
-                <Camera className="w-5 h-5" />
-                Galerie photos
-              </motion.button>
-              
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="bg-[#F5F3F0] text-black px-6 py-4 rounded-xl font-semibold hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 border border-gray-200 sm:col-span-2 lg:col-span-1"
-              >
-                <Camera className="w-5 h-5" />
-                Visite 3D
-              </motion.button>
-            </div>
-          </motion.div>
+
         </div>
-      </section>
+      </motion.section>
 
       {/* Gallery Modal */}
-      {galleryOpen && (
-        <GalleryModal 
-          isOpen={galleryOpen}
-          onClose={() => setGalleryOpen(false)}
-        />
-      )}
+      <GalleryModal isOpen={showGallery} onClose={() => setShowGallery(false)} />
     </>
   );
 };

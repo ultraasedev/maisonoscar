@@ -2,7 +2,8 @@
 
 import { motion, useInView } from 'framer-motion';
 import { MessageCircle, Mail, Phone, MapPin, Send } from 'lucide-react';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { config } from '@/lib/config';
 
 interface FormData {
   name: string;
@@ -23,6 +24,29 @@ export const ContactSection = () => {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [contactSettings, setContactSettings] = useState({
+    email: config.contacts.email,
+    phone: config.contacts.phone,
+    whatsapp: config.contacts.whatsapp,
+    address: config.contacts.address
+  });
+
+  useEffect(() => {
+    // Récupérer les contacts depuis les settings
+    fetch('/api/cms/settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.data) {
+          setContactSettings({
+            email: data.data.contactEmail || config.contacts.email,
+            phone: data.data.contactPhone || config.contacts.phone,
+            whatsapp: data.data.whatsappNumber || config.contacts.whatsapp,
+            address: data.data.contactAddress || config.contacts.address
+          });
+        }
+      })
+      .catch(console.error);
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -36,43 +60,92 @@ export const ContactSection = () => {
     e.preventDefault();
     setIsSubmitting(true);
     
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    alert('Merci ! Nous vous contacterons très bientôt 🏠');
-    setIsSubmitting(false);
-    
-    setFormData({
-      name: '',
-      email: '',
-      phone: '',
-      message: ''
-    });
+    try {
+      // Séparer le nom complet en prénom et nom
+      const nameParts = formData.name.trim().split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || nameParts[0] || '';
+      
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          firstName,
+          lastName,
+          email: formData.email,
+          phone: formData.phone,
+          subject: 'Demande d\'information',
+          message: formData.message,
+          type: 'QUESTION'
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Afficher un message de succès
+        const successDiv = document.createElement('div');
+        successDiv.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+        successDiv.textContent = 'Message envoyé avec succès ! Nous vous contacterons bientôt.';
+        document.body.appendChild(successDiv);
+        
+        setTimeout(() => {
+          successDiv.remove();
+        }, 5000);
+        
+        // Réinitialiser le formulaire
+        setFormData({
+          name: '',
+          email: '',
+          phone: '',
+          message: ''
+        });
+      } else {
+        throw new Error(data.error || 'Erreur lors de l\'envoi');
+      }
+    } catch (error) {
+      console.error('Erreur:', error);
+      // Afficher un message d'erreur
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+      errorDiv.textContent = 'Erreur lors de l\'envoi. Veuillez réessayer.';
+      document.body.appendChild(errorDiv);
+      
+      setTimeout(() => {
+        errorDiv.remove();
+      }, 5000);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleWhatsAppClick = () => {
     const message = encodeURIComponent(
       "Bonjour ! Je suis intéressé(e) par le co-living Maison Oscar à Bruz. Pouvez-vous me donner plus d'informations ?"
     );
-    window.open(`https://wa.me/33612345678?text=${message}`, '_blank');
+    const whatsappNumber = contactSettings.whatsapp.replace(/\s/g, '');
+    window.open(`https://wa.me/${whatsappNumber}?text=${message}`, '_blank');
   };
 
   const contactInfo = [
     {
       icon: MapPin,
       title: 'Adresse',
-      content: 'Bruz, Ille-et-Vilaine (35)',
+      content: contactSettings.address,
       subContent: '15 min de Rennes'
     },
     {
       icon: Phone,
       title: 'Téléphone',
-      content: '06 12 34 56 78',
+      content: contactSettings.phone,
       subContent: 'Lun-Sam 9h-19h'
     },
     {
       icon: Mail,
       title: 'Email',
-      content: 'contact@maisonoscar.fr',
+      content: contactSettings.email,
       subContent: 'Réponse sous 24h'
     }
   ];

@@ -1,6 +1,5 @@
-// Fichier : prisma/schema.prisma
-// Description : Schéma complet pour Maison Oscar Co-living
-// Base de données : MongoDB Atlas Cloud
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
   provider = "prisma-client-js"
@@ -11,45 +10,12 @@ datasource db {
   url      = env("MONGODB_URI")
 }
 
-// === GESTION DES UTILISATEURS === //
-
-model User {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  email     String   @unique
-  phone     String?
-  firstName String
-  lastName  String
-  birthDate DateTime?
-  
-  // Statut utilisateur
-  role      UserRole @default(RESIDENT)
-  status    UserStatus @default(ACTIVE)
-  
-  // Informations complémentaires
-  profession   String?
-  school       String?
-  emergencyContact String?
-  emergencyPhone   String?
-  
-  // Profil
-  bio          String?
-  profileImage String?
-  
-  // Relations
-  bookings     Booking[]
-  payments     Payment[]
-  
-  // Métadonnées
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  @@map("users")
-}
+// === ENUMS === //
 
 enum UserRole {
   ADMIN
   MANAGER
-  RESIDENT
+  RESIDENT        // ✅ Utilisé dans le seed
   PROSPECT
 }
 
@@ -60,293 +26,870 @@ enum UserStatus {
   SUSPENDED
 }
 
-// === GESTION DES CHAMBRES === //
+enum RoomStatus {
+  AVAILABLE
+  OCCUPIED
+  MAINTENANCE
+  UNAVAILABLE
+}
 
-model Room {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  name        String   // "Chambre Arche 1", "Chambre Jardin 2"
-  number      Int      @unique // 1, 2, 3...
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  ACTIVE
+  CANCELLED
+  ENDED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  LATE
+  CANCELLED
+}
+
+enum PaymentType {
+  RENT
+  DEPOSIT           // ✅ Utilisé dans l'API booking
+  CHARGES
+  FEES
+}
+
+enum ContactType {
+  QUESTION
+  VISIT_REQUEST
+  BOOKING_REQUEST
+  COMPLAINT
+  VISIT             // ✅ Utilisé dans le seed
+  INFORMATION       // ✅ Utilisé dans le seed
+  MAINTENANCE       // ✅ Utilisé dans le seed
+  BOOKING           // ✅ Utilisé dans le seed
+  OTHER
+}
+
+enum ContactStatus {
+  NEW
+  IN_PROGRESS
+  RESOLVED
+  RESPONDED         // ✅ Utilisé dans le seed
+  PENDING           // ✅ Utilisé dans le seed
+  CLOSED
+}
+
+// Enum pour les statuts de dossier de réservation
+enum BookingRequestStatus {
+  DRAFT             // En cours de remplissage
+  SUBMITTED         // Soumis, en attente de vérification
+  IN_REVIEW         // En cours de vérification
+  INCOMPLETE        // Dossier incomplet
+  APPROVED          // Approuvé
+  REJECTED          // Refusé
+  CONTRACT_SENT     // Contrat envoyé
+  CONTRACT_SIGNED   // Contrat signé
+  DEPOSIT_PENDING   // En attente de caution
+  COMPLETED         // Finalisé
+}
+
+// Enum pour la situation de logement
+enum HousingSituation {
+  TENANT            // Locataire
+  OWNER             // Propriétaire
+  HOSTED            // Hébergé
+}
+
+// Enum pour la situation professionnelle
+enum ProfessionalStatus {
+  EMPLOYEE          // Salarié
+  SELF_EMPLOYED     // Auto-entrepreneur
+  STUDENT           // Étudiant
+  ALTERNANT         // Alternant
+  UNEMPLOYED        // Sans emploi
+  OTHER             // Autre
+}
+
+// Enum pour le type de garant
+enum GuarantorType {
+  INDIVIDUAL        // Personne physique
+  VISALE            // Visale
+  COMPANY           // Entreprise
+  NONE              // Pas de garant
+}
+
+// ✅ NOUVEAUX ENUMS POUR LES CHAMBRES
+enum BedType {
+  SINGLE
+  DOUBLE
+  QUEEN
+  KING
+  BUNK
+}
+
+enum KitchenType {
+  SHARED
+  PRIVATE
+  KITCHENETTE
+}
+
+enum CookingPlateType {
+  GAS
+  INDUCTION
+  ELECTRIC
+}
+
+enum Exposure {
+  SUNNY
+  SHADED
+  MIXED
+}
+
+enum ContractStatus {
+  DRAFT
+  PENDING
+  SIGNED
+  ACTIVE
+  EXPIRED
+  TERMINATED
+}
+
+enum SignerRole {
+  TENANT
+  GUARANTOR
+  LANDLORD
+}
+
+// === MODÈLES === //
+
+model User {
+  id                String      @id @default(auto()) @map("_id") @db.ObjectId
+  email             String      @unique
+  firstName         String
+  lastName          String
+  phone             String?
+  role              UserRole    @default(MANAGER)
+  status            UserStatus  @default(PENDING)
   
-  // Informations principales
-  price       Float    // Prix mensuel en euros
-  surface     Float    // Surface en m²
-  description String
+  // ✅ CORRIGÉ : Profil détaillé avec noms du seed
+  birthDate         DateTime?   // ✅ Utilisé dans le seed
+  profession        String?
+  school            String?
+  bio               String?
+  profileImage      String?
   
-  // Statut et disponibilité
-  status      RoomStatus @default(AVAILABLE)
-  isActive    Boolean    @default(true)
-  
-  // Équipements et caractéristiques
-  hasPrivateBathroom Boolean @default(false)
-  hasBalcony         Boolean @default(false)
-  hasDesk            Boolean @default(true)
-  hasCloset          Boolean @default(true)
-  hasWindow          Boolean @default(true)
-  floor              Int     @default(0) // 0=RDC, 1=Étage
-  orientation        String? // "Sud", "Nord", "Est-Ouest"
-  
-  // Médias
-  images      String[] // URLs des photos
-  virtualTour String?  // URL visite 3D
-  isVirtualTourActive Boolean @default(false)
+  // ✅ CORRIGÉ : Contact d'urgence avec noms du seed
+  emergencyContact  String?     // ✅ Utilisé dans le seed
+  emergencyPhone    String?     // ✅ Utilisé dans le seed
   
   // Relations
-  bookings    Booking[]
+  bookings          Booking[]
+  contacts          Contact[]
+  payments          Payment[]   // ✅ AJOUTÉ : Relation directe avec Payment (utilisée dans le seed)
+  auth              Auth?       // ✅ AJOUTÉ : Relation avec l'authentification
+  bookingRequests   BookingRequest[] // Dossiers de réservation
   
   // Métadonnées
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  
+  @@map("users")
+}
+
+// ✅ MODÈLE ROOM COMPLET AVEC NOUVEAUX CHAMPS
+model Room {
+  id                    String         @id @default(auto()) @map("_id") @db.ObjectId
+  
+  // Informations de base
+  name                  String
+  number                Int            @unique
+  price                 Float
+  surface               Float
+  description           String?
+  status                RoomStatus     @default(AVAILABLE)
+  isActive              Boolean        @default(true)
+  
+  // Équipements de base
+  hasPrivateBathroom    Boolean        @default(false)
+  hasBalcony            Boolean        @default(false)
+  hasDesk               Boolean        @default(true)
+  hasCloset             Boolean        @default(true)
+  hasWindow             Boolean        @default(true)
+  
+  // Localisation
+  floor                 Int            @default(0)
+  orientation           String         @default("Sud")
+  exposure              Exposure       @default(SUNNY)
+  
+  // Images et visite virtuelle
+  images                String[]       @default([])
+  virtualTour           String?
+  isVirtualTourActive   Boolean        @default(false)
+  
+  // ✅ NOUVEAUX CHAMPS: Configuration couchage
+  bedType               BedType        @default(DOUBLE)
+  bedCount              Int            @default(1)
+  sheetsProvided        Boolean        @default(true)
+  
+  // ✅ NOUVEAUX CHAMPS: Configuration cuisine
+  kitchenType           KitchenType    @default(SHARED)
+  kitchenEquipment      String[]       @default([])
+  hasMicrowave          Boolean        @default(false)
+  hasOven               Boolean        @default(false)
+  hasCookingPlates      Boolean        @default(false)
+  cookingPlateType      CookingPlateType @default(INDUCTION)
+  
+  // ✅ NOUVEAUX CHAMPS: Équipements additionnels
+  hasTV                 Boolean        @default(false)
+  
+  // ✅ NOUVEAUX CHAMPS: Règlement
+  petsAllowed           Boolean        @default(false)
+  smokingAllowed        Boolean        @default(false)
+  
+  // Relations
+  bookings              Booking[]
+  bookingRequests       BookingRequest[] // Dossiers de réservation
+  
+  // Métadonnées
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
   
   @@map("rooms")
 }
 
-enum RoomStatus {
-  AVAILABLE     // Disponible
-  OCCUPIED      // Occupée
-  MAINTENANCE   // En maintenance
-  UNAVAILABLE   // Indisponible (admin)
-}
-
-// === GESTION DES RÉSERVATIONS === //
-
 model Booking {
-  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  id                String        @id @default(auto()) @map("_id") @db.ObjectId
   
   // Relations
-  userId   String @db.ObjectId
-  user     User   @relation(fields: [userId], references: [id])
-  roomId   String @db.ObjectId
-  room     Room   @relation(fields: [roomId], references: [id])
+  userId            String        @db.ObjectId
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roomId            String        @db.ObjectId
+  room              Room          @relation(fields: [roomId], references: [id], onDelete: Cascade)
   
-  // Période de réservation
-  startDate DateTime
-  endDate   DateTime?  // null = durée indéterminée
+  // Dates
+  startDate         DateTime
+  endDate           DateTime?
   
-  // Statut de la réservation
-  status    BookingStatus @default(PENDING)
+  // Statut et informations
+  status            BookingStatus @default(PENDING)
+  monthlyRent       Float
+  securityDeposit   Float
+  totalAmount       Float
   
-  // Informations financières
-  monthlyRent    Float
-  securityDeposit Float @default(0)
-  totalAmount    Float
-  
-  // Documents et validations
-  contractSigned Boolean @default(false)
-  inventorySigned Boolean @default(false)
-  keysGiven       Boolean @default(false)
+  // Documents et processus
+  contractSigned    Boolean       @default(false)
+  inventorySigned   Boolean       @default(false)
+  keysGiven         Boolean       @default(false)
   
   // Notes admin
-  notes String?
+  notes             String?
   
-  // Relations paiements
-  payments Payment[]
+  // Relations
+  payments          Payment[]
+  roommates         Roommate[]    // Ajout de la relation avec les colocataires
+  contract          Contract?     // Relation avec le contrat
   
   // Métadonnées
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
   
   @@map("bookings")
 }
 
-enum BookingStatus {
-  PENDING     // En attente
-  CONFIRMED   // Confirmée
-  ACTIVE      // En cours (résident installé)
-  ENDED       // Terminée
-  CANCELLED   // Annulée
-}
-
-// === GESTION DES PAIEMENTS === //
-
 model Payment {
-  id        String @id @default(auto()) @map("_id") @db.ObjectId
+  id                String        @id @default(auto()) @map("_id") @db.ObjectId
   
   // Relations
-  userId    String  @db.ObjectId
-  user      User    @relation(fields: [userId], references: [id])
-  bookingId String  @db.ObjectId
-  booking   Booking @relation(fields: [bookingId], references: [id])
+  userId            String        @db.ObjectId      // ✅ AJOUTÉ : Utilisé dans le seed
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookingId         String        @db.ObjectId
+  booking           Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   
   // Informations paiement
-  amount      Float
-  dueDate     DateTime
-  paidDate    DateTime?
-  paymentType PaymentType
+  amount            Float
+  paymentType       PaymentType
+  status            PaymentStatus @default(PENDING)
   
-  // Statut
-  status      PaymentStatus @default(PENDING)
-  isLate      Boolean       @default(false)
-  lateDays    Int           @default(0)
+  // Dates
+  dueDate           DateTime
+  paidDate          DateTime?
   
-  // Relances
-  reminderSent Boolean   @default(false)
-  reminderDate DateTime?
-  
-  // Notes
-  notes String?
+  // ✅ AJOUTÉ : Champs utilisés dans le seed
+  isLate            Boolean       @default(false)
+  lateDays          Int?          // ✅ Utilisé dans le seed
+  reminderSent      Boolean       @default(false)
+  reminderDate      DateTime?     // ✅ Utilisé dans le seed
+  reminderCount     Int           @default(0)
   
   // Métadonnées
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
   
   @@map("payments")
 }
 
-enum PaymentType {
-  RENT            // Loyer mensuel
-  SECURITY_DEPOSIT // Caution
-  CHARGES         // Charges
-  LATE_FEE        // Frais de retard
-}
-
-enum PaymentStatus {
-  PENDING   // En attente
-  PAID      // Payé
-  LATE      // En retard
-  CANCELLED // Annulé
-}
-
-// === GESTION DES CONTACTS === //
-
 model Contact {
-  id      String @id @default(auto()) @map("_id") @db.ObjectId
+  id                String        @id @default(auto()) @map("_id") @db.ObjectId
   
   // Informations contact
-  firstName String
-  lastName  String
-  email     String
-  phone     String?
+  firstName         String
+  lastName          String
+  email             String
+  phone             String?
   
   // Message
-  subject   String
-  message   String
+  subject           String
+  message           String
+  type              ContactType   @default(QUESTION)
+  status            ContactStatus @default(NEW)
   
-  // Type de demande
-  type      ContactType @default(GENERAL)
+  // Relation utilisateur (optionnelle)
+  userId            String?       @db.ObjectId
+  user              User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
   
-  // Statut traitement
-  status    ContactStatus @default(NEW)
-  
-  // Réponse admin
-  adminResponse String?
-  respondedAt   DateTime?
-  respondedBy   String?  // Email admin
+  // ✅ CORRIGÉ : Réponse admin avec noms du seed
+  adminResponse     String?
+  respondedAt       DateTime?
+  respondedBy       String?       // ✅ Ajouté pour le seed
   
   // Métadonnées
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
   
   @@map("contacts")
 }
 
-enum ContactType {
-  GENERAL       // Demande générale
-  BOOKING       // Demande de réservation
-  VISIT         // Demande de visite
-  COMPLAINT     // Réclamation
-  MAINTENANCE   // Maintenance
-  INFORMATION   // Information
-}
-
-enum ContactStatus {
-  NEW       // Nouveau
-  PENDING   // En cours de traitement
-  RESPONDED // Répondu
-  CLOSED    // Fermé
-}
-
-// === CONFIGURATION DU SITE === //
-
-model SiteConfig {
-  id    String @id @default(auto()) @map("_id") @db.ObjectId
-  key   String @unique // Clé unique pour chaque config
-  value String // Valeur JSON ou texte
+model House {
+  id                String        @id @default(auto()) @map("_id") @db.ObjectId
+  
+  // Informations générales
+  name              String        @default("Maison Oscar")
+  description       String?       // ✅ AJOUTÉ : Utilisé dans le seed
+  address           String
+  city              String        @default("Bruz")
+  zipCode           String        @default("35170")  // ✅ CORRIGÉ : zipCode au lieu de postalCode
+  country           String        @default("France") // ✅ AJOUTÉ : Utilisé dans le seed
+  region            String?       @default("Bretagne")
+  
+  // Caractéristiques
+  totalRooms        Int           @default(9)
+  totalSurface      Int           @default(180)
+  hasGarden         Boolean       @default(true)
+  hasParking        Boolean       @default(true)
+  
+  // ✅ AJOUTÉ : Champs utilisés dans le seed
+  commonAreas       String[]      @default([])  // Liste des espaces communs
+  gardenSurface     Int?          // Surface du jardin
+  parkingSpaces     Int?          // Nombre de places de parking
+  metroDistance     String?       // Distance métro/transport
+  busLines          String[]      @default([])  // Lignes de bus
+  floorPlan         String?       // Plan de la maison
+  
+  // Transport
+  distanceToRennes  Int           @default(15) // en minutes
+  nearestBusStop    String?
+  nearestMetroStop  String?
+  
+  // Médias
+  images            String[]      @default([])
+  virtualTour       String?
+  
+  // ✅ AJOUTÉ : Activation (utilisé dans le seed)
+  isActive          Boolean       @default(true)
   
   // Métadonnées
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  
+  @@map("house")
+}
+
+model ContactInfo {
+  id                String        @id @default(auto()) @map("_id") @db.ObjectId
+  
+  // Contact principal
+  email             String        @default("contact@maisonoscar.fr")
+  phone             String        @default("+33 6 12 34 56 78")
+  whatsapp          String        @default("+33 6 12 34 56 78")
+  
+  // ✅ CORRIGÉ : Adresse avec champs du seed
+  address           String        @default("Bruz, Bretagne")
+  city              String        @default("Bruz")      // ✅ AJOUTÉ : Utilisé dans le seed
+  zipCode           String        @default("35170")     // ✅ AJOUTÉ : Utilisé dans le seed
+  
+  // ✅ AJOUTÉ : Champs utilisés dans le seed
+  openingHours      Json?         // Horaires d'ouverture en JSON
+  instagram         String?
+  facebook          String?
+  linkedin          String?
+  siret             String?       // SIRET de l'entreprise
+  companyName       String?       // Nom de l'entreprise
+  isActive          Boolean       @default(true)
+  
+  // Métadonnées
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  
+  @@map("contact_info")
+}
+
+model SiteConfig {
+  id                String        @id @default(auto()) @map("_id") @db.ObjectId
+  
+  // ✅ CORRIGÉ : Configuration avec key/value du seed
+  key               String        @unique  // ✅ Utilisé dans le seed (hero_stats, testimonials, etc.)
+  value             String        // ✅ JSON stringifié dans le seed
+  
+  // Métadonnées
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
   
   @@map("site_config")
 }
 
-// === GESTION DE LA MAISON === //
-
-model House {
-  id          String @id @default(auto()) @map("_id") @db.ObjectId
+// Modèle pour les dossiers de réservation
+model BookingRequest {
+  id                        String        @id @default(auto()) @map("_id") @db.ObjectId
   
-  // Informations principales
-  name        String @default("Maison Oscar")
-  description String
+  // Informations de base
+  roomId                    String        @db.ObjectId
+  room                      Room          @relation(fields: [roomId], references: [id])
   
-  // Localisation
-  address     String
-  city        String @default("Bruz")
-  zipCode     String @default("35170")
-  country     String @default("France")
+  // Durée souhaitée
+  desiredStartDate          DateTime
+  desiredDuration           Int           // En mois
+  hasLivedInColiving        Boolean       @default(false)
   
-  // Caractéristiques
-  totalSurface    Float   // Surface totale en m²
-  totalRooms      Int     // Nombre total de chambres
-  commonAreas     String[] // ["Salon", "Cuisine", "Jardin"]
+  // Informations personnelles
+  firstName                 String
+  lastName                  String
+  email                     String
+  phone                     String
+  birthDate                 DateTime
+  birthPlace                String
+  nationality               String
+  maritalStatus             String        // Célibataire, Marié(e), Pacsé(e), Divorcé(e), Veuf(ve)
   
-  // Commodités
-  hasGarden       Boolean @default(false)
-  gardenSurface   Float?  // Surface jardin en m²
-  hasParking      Boolean @default(false)
-  parkingSpaces   Int     @default(0)
+  // Situation de logement actuelle
+  currentHousingSituation   HousingSituation
+  currentAddress            String
+  currentCity               String
+  currentZipCode            String
   
-  // Transport
-  metroDistance   String? // "15 min de Rennes"
-  busLines        String[] // Lignes de bus
+  // Si mineur - Responsables légaux
+  isMinor                   Boolean       @default(false)
+  legalGuardian1FirstName   String?
+  legalGuardian1LastName    String?
+  legalGuardian1Phone       String?
+  legalGuardian1Email       String?
+  legalGuardian1Address     String?
   
-  // Médias
-  images          String[] // URLs des photos
-  virtualTour     String?  // URL visite 3D
-  floorPlan       String?  // Plan de la maison
+  legalGuardian2FirstName   String?
+  legalGuardian2LastName    String?
+  legalGuardian2Phone       String?
+  legalGuardian2Email       String?
+  legalGuardian2Address     String?
   
-  // Statut
-  isActive        Boolean @default(true)
+  // Situation professionnelle
+  professionalStatus        ProfessionalStatus
+  employerName              String?
+  employerAddress           String?
+  position                  String?
+  monthlyIncome             Float?
+  contractType              String?       // CDI, CDD, Intérim, etc.
+  contractStartDate         DateTime?
+  
+  // Pour étudiants/alternants
+  schoolName                String?
+  studyLevel                String?
+  studyField                String?
+  
+  // Garant
+  hasGuarantor              Boolean       @default(false)
+  guarantorType             GuarantorType @default(NONE)
+  
+  // Si garant individuel
+  guarantorFirstName        String?
+  guarantorLastName         String?
+  guarantorPhone            String?
+  guarantorEmail            String?
+  guarantorAddress          String?
+  guarantorRelationship     String?       // Parent, Ami, Autre
+  guarantorMonthlyIncome    Float?
+  guarantorEmployerName     String?
+  guarantorProfession       String?
+  
+  // Documents (URLs vers les fichiers uploadés)
+  documents                 Json          @default("{}") // Objet avec les URLs des documents
+  /* Structure attendue:
+  {
+    "identity": "url",                    // CNI/Passeport
+    "identityGuardian1": "url",          // Si mineur
+    "identityGuardian2": "url",          // Si mineur
+    "proofOfAddress": ["url1", "url2", "url3"], // 3 dernières factures
+    "employmentContract": "url",
+    "payslips": ["url1", "url2", "url3"], // 3 derniers bulletins
+    "studentCard": "url",                 // Si étudiant
+    "alternanceContract": "url",          // Si alternant
+    "taxNotice": "url",                   // Avis d'imposition
+    "guarantorIdentity": "url",
+    "guarantorProofOfIncome": ["url1", "url2", "url3"],
+    "guarantorTaxNotice": "url",
+    "visaleAttestation": "url"           // Si Visale
+  }
+  */
+  
+  // Statut et suivi
+  status                    BookingRequestStatus @default(DRAFT)
+  submittedAt               DateTime?
+  reviewedAt                DateTime?
+  reviewedBy                String?       @db.ObjectId
+  reviewer                  User?         @relation(fields: [reviewedBy], references: [id])
+  reviewNotes               String?       // Notes internes de l'équipe
+  rejectionReason           String?       // Raison du refus si rejeté
+  
+  // Contrat
+  contractUrl               String?       // URL du contrat généré
+  contractSentAt            DateTime?
+  contractSignedAt          DateTime?
+  
+  // Paiement caution
+  depositAmount             Float?
+  depositPaidAt             DateTime?
+  depositPaymentMethod      String?       // Virement, CB, etc.
+  
+  // Colocataires
+  roommates                 BookingRequestRoommate[]
   
   // Métadonnées
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt                 DateTime      @default(now())
+  updatedAt                 DateTime      @updatedAt
   
-  @@map("houses")
+  @@index([email])
+  @@index([status])
+  @@index([roomId])
+  @@map("booking_requests")
 }
 
-// === INFORMATIONS DE CONTACT === //
-
-model ContactInfo {
-  id    String @id @default(auto()) @map("_id") @db.ObjectId
+// ✅ NOUVEAU : Modèle pour l'authentification
+model Auth {
+  id                String        @id @default(auto()) @map("_id") @db.ObjectId
   
-  // Contact principal
-  email      String
-  phone      String
-  whatsapp   String?
+  // Relation avec l'utilisateur
+  userId            String        @unique @db.ObjectId
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   
-  // Horaires
-  openingHours String // JSON des horaires
+  // Informations d'authentification
+  hashedPassword    String
+  mustChangePassword Boolean      @default(true)  // Force le changement à la première connexion
   
-  // Adresse
-  address    String
-  city       String
-  zipCode    String
+  // Token de réinitialisation
+  resetToken        String?
+  resetTokenExpiry  DateTime?
   
-  // Réseaux sociaux
-  instagram  String?
-  facebook   String?
-  linkedin   String?
-  
-  // Informations légales
-  siret      String?
-  companyName String?
-  
-  // Statut
-  isActive   Boolean @default(true)
+  // Historique de connexion
+  lastLogin         DateTime?
+  failedAttempts    Int           @default(0)
+  lockedUntil       DateTime?
   
   // Métadonnées
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
   
-  @@map("contact_info")
+  @@map("auth")
+}
+
+// ✅ NOUVEAU : Modèle pour les colocataires
+model Roommate {
+  id                String        @id @default(auto()) @map("_id") @db.ObjectId
+  
+  // Relation avec la réservation
+  bookingId         String        @db.ObjectId
+  booking           Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  
+  // Informations du colocataire
+  firstName         String
+  lastName          String
+  email             String
+  phone             String?
+  birthDate         DateTime?
+  profession        String?
+  
+  // Contact d'urgence
+  emergencyContact  String?
+  emergencyPhone    String?
+  
+  // Métadonnées
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  
+  @@map("roommates")
+}
+
+// ✅ NOUVEAU : Modèle pour les colocataires dans les demandes de réservation
+model BookingRequestRoommate {
+  id                String        @id @default(auto()) @map("_id") @db.ObjectId
+  
+  // Relation avec la demande de réservation
+  bookingRequestId  String        @db.ObjectId
+  bookingRequest    BookingRequest @relation(fields: [bookingRequestId], references: [id], onDelete: Cascade)
+  
+  // Informations du colocataire
+  firstName         String
+  lastName          String
+  email             String
+  phone             String
+  birthDate         DateTime
+  
+  // Métadonnées
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  
+  @@map("booking_request_roommates")
+}
+
+// Modèle pour les contrats de location
+model Contract {
+  id                String        @id @default(auto()) @map("_id") @db.ObjectId
+  
+  // Relations
+  bookingId         String        @unique @db.ObjectId
+  booking           Booking       @relation(fields: [bookingId], references: [id])
+  
+  // Informations du contrat
+  contractNumber    String        @unique
+  startDate         DateTime
+  endDate           DateTime
+  monthlyRent       Float
+  deposit           Float
+  charges           Float
+  
+  // Statut
+  status            ContractStatus @default(DRAFT)
+  
+  // Fichiers
+  pdfUrl            String?       // URL du PDF généré
+  
+  // Dates de signature
+  createdAt         DateTime      @default(now())
+  signedAt          DateTime?
+  
+  // Relations avec les signatures
+  signatures        ContractSignature[]
+  
+  // Métadonnées
+  updatedAt         DateTime      @updatedAt
+  
+  @@map("contracts")
+}
+
+// Modèle pour les signatures des contrats
+model ContractSignature {
+  id                String        @id @default(auto()) @map("_id") @db.ObjectId
+  
+  // Relation avec le contrat
+  contractId        String        @db.ObjectId
+  contract          Contract      @relation(fields: [contractId], references: [id])
+  
+  // Informations du signataire
+  signerName        String
+  signerEmail       String
+  signerRole        SignerRole
+  
+  // Signature
+  signatureData     String        // Data URL de la signature (base64)
+  signedAt          DateTime
+  
+  // Métadonnées de traçabilité
+  ipAddress         String
+  userAgent         String
+  
+  // Métadonnées
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  
+  @@map("contract_signatures")
+}
+
+// ✅ NOUVEAU : Configuration juridique et propriétaires
+model LegalConfig {
+  id                String        @id @default(auto()) @map("_id") @db.ObjectId
+  
+  // Type de structure
+  legalType         String        @default("INDIVIDUAL") // INDIVIDUAL ou COMPANY
+  
+  // Si nom propre (INDIVIDUAL)
+  owners            Json?         // [{firstName, lastName, address, phone, email}]
+  
+  // Si entreprise (COMPANY)
+  companyName       String?
+  tradeName         String?       // Nom commercial
+  legalForm         String?       // SARL, SAS, SCI, etc.
+  siret             String?
+  capital           Float?        // Capital social
+  rcsNumber         String?       // Numéro RCS
+  vatNumber         String?       // Numéro TVA
+  
+  // Adresse du siège
+  legalAddress      String?
+  legalCity         String?
+  legalZipCode      String?
+  legalCountry      String?       @default("France")
+  
+  // Coordonnées bancaires (pour virements)
+  bankName          String?
+  iban              String?
+  bic               String?
+  
+  // Métadonnées
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  
+  @@map("legal_config")
+}
+
+// ✅ NOUVEAU : Modèle pour le CMS (contenu éditable)
+model ContentSection {
+  id                String        @id @default(auto()) @map("_id") @db.ObjectId
+  
+  // Identification de la section
+  key               String        @unique // hero, about, rooms, testimonials, etc.
+  name              String        // Nom affiché dans l'admin
+  
+  // Contenu
+  content           Json          // Structure flexible selon la section
+  
+  // Statut
+  isActive          Boolean       @default(true)
+  
+  // Métadonnées
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  lastEditedBy      String?       // ID de l'admin qui a modifié
+  
+  @@map("content_sections")
+}
+
+// ✅ NOUVEAU : Modèle pour les témoignages
+model Testimonial {
+  id                String        @id @default(auto()) @map("_id") @db.ObjectId
+  
+  // Informations du témoignage
+  name              String
+  role              String        // Étudiant, Alternant, etc.
+  content           String
+  rating            Int           @default(5) // Note sur 5
+  imageUrl          String?
+  
+  // Statut
+  isActive          Boolean       @default(true)
+  order             Int           @default(0) // Ordre d'affichage
+  
+  // Métadonnées
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  
+  @@map("testimonials")
+}
+
+// ✅ NOUVEAU : Configuration générale du site
+model SiteSettings {
+  id                String        @id @default(auto()) @map("_id") @db.ObjectId
+  
+  // Informations générales
+  siteName          String        @default("Maison Oscar")
+  siteUrl           String        @default("https://maisonoscar.fr")
+  logoUrl           String?
+  faviconUrl        String?
+  
+  // SEO
+  metaTitle         String        @default("Maison Oscar - Colocation étudiante à Bruz")
+  metaDescription   String        @default("Découvrez nos chambres en colocation à Bruz, proche de Rennes. Idéal pour étudiants et jeunes actifs.")
+  metaKeywords      String[]      @default([])
+  ogImageUrl        String?
+  
+  // Réseaux sociaux
+  facebookUrl       String?
+  instagramUrl      String?
+  linkedinUrl       String?
+  twitterUrl        String?
+  
+  // Emails
+  contactEmail      String        @default("contact@maisonoscar.fr")
+  adminEmail        String        @default("admin@maisonoscar.fr")
+  notificationEmail String?       // Email pour recevoir les notifications
+  
+  // Configuration SMTP (pour l'envoi d'emails)
+  smtpHost          String?
+  smtpPort          Int?
+  smtpUser          String?
+  smtpPassword      String?       // À chiffrer en production
+  smtpSecure        Boolean       @default(true)
+  
+  // Google Analytics / Tags
+  googleAnalyticsId String?
+  googleTagManagerId String?
+  facebookPixelId   String?
+  
+  // Métadonnées
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  
+  @@map("site_settings")
+}
+
+// ✅ NOUVEAU : Mentions légales
+model LegalPage {
+  id                String        @id @default(auto()) @map("_id") @db.ObjectId
+  
+  // Type de page
+  pageType          String        @unique // mentions-legales, cgv, cgu, politique-confidentialite
+  title             String
+  content           String        // Contenu HTML
+  
+  // Statut
+  isActive          Boolean       @default(true)
+  
+  // Métadonnées
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  lastEditedBy      String?
+  
+  @@map("legal_pages")
+}
+
+// ✅ NOUVEAU : Messages de contact depuis le formulaire
+model ContactMessage {
+  id                String        @id @default(auto()) @map("_id") @db.ObjectId
+  
+  // Informations du contact
+  firstName         String
+  lastName          String
+  email             String
+  phone             String?
+  
+  // Message
+  subject           String
+  message           String
+  
+  // Type et statut
+  type              ContactType   @default(QUESTION)
+  status            ContactStatus @default(NEW)
+  
+  // Suivi
+  isRead            Boolean       @default(false)
+  readAt            DateTime?
+  respondedAt       DateTime?
+  response          String?
+  respondedBy       String?       // ID de l'admin
+  
+  // Source
+  source            String        @default("website") // website, email, phone
+  ipAddress         String?
+  userAgent         String?
+  
+  // Métadonnées
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  
+  @@index([email])
+  @@index([status])
+  @@map("contact_messages")
 }

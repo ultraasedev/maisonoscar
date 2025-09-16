@@ -180,6 +180,16 @@ function LoginForm() {
               </div>
             </div>
 
+            {/* Mot de passe oublié */}
+            <div className="text-right">
+              <Link 
+                href="/admin/forgot-password"
+                className="text-sm text-gray-600 hover:text-black transition-colors"
+              >
+                Mot de passe oublié ?
+              </Link>
+            </div>
+
             {/* Bouton de connexion */}
             <button
               type="submit"
@@ -195,7 +205,7 @@ function LoginForm() {
             </button>
           </form>
 
-          {/* Lien retour */}
+          {/* Liens footer */}
           <div className="mt-6 text-center">
             <Link 
               href="/"
@@ -206,16 +216,7 @@ function LoginForm() {
           </div>
         </div>
 
-        {/* Version de développement */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
-            <p className="text-yellow-800 text-sm font-medium mb-2">Mode développement</p>
-            <p className="text-yellow-700 text-xs">
-              Email: admin@maisonoscar.fr<br />
-              Mot de passe: admin123
-            </p>
-          </div>
-        )}
+
       </div>
     </div>
   )

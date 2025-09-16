@@ -1,11 +1,38 @@
+'use client'
+
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { config } from '@/lib/config';
 
 export const Footer = () => {
+  const [contacts, setContacts] = useState(config.contacts);
+
+  useEffect(() => {
+    // Récupérer les contacts depuis les settings si disponibles
+    fetch('/api/cms/settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.data) {
+          const settings = data.data;
+          if (settings.contactPhone || settings.contactEmail) {
+            setContacts({
+              phone: settings.contactPhone || config.contacts.phone,
+              email: settings.contactEmail || config.contacts.email,
+              whatsapp: settings.whatsappNumber || config.contacts.whatsapp,
+              address: settings.contactAddress || config.contacts.address
+            });
+          }
+        }
+      })
+      .catch(console.error);
+  }, []);
+
   const navigationLinks = [
     { label: 'Accueil', href: '#accueil' },
     { label: 'Le co-living', href: '#coliving' },
     { label: 'Notre maison', href: '#maison' },
     { label: 'Chambres', href: '#chambres' },
+    { label: 'Mentions légales', href: '/mentions-legales' },
   ];
 
   const services = [
@@ -16,9 +43,9 @@ export const Footer = () => {
   ];
 
   const contactInfo = [
-    'Bruz, Ille-et-Vilaine',
-    '06 12 34 56 78',
-    'contact@maisonoscar.fr'
+    contacts.address,
+    contacts.phone,
+    contacts.email
   ];
 
   return (

@@ -3,9 +3,43 @@
 import { motion, useScroll, useTransform } from 'framer-motion';
 import Link from 'next/link';
 import { ArrowDown, Play } from 'lucide-react';
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
 
 export const HeroSection = () => {
+  const [roomCount, setRoomCount] = useState(0);
+  const [content, setContent] = useState({
+    title: "Créateur de liens",
+    subtitle: "en Bretagne",
+    description: "",
+    cta1: "Découvrir la maison",
+    cta2: "Voir les chambres"
+  });
+  
+  useEffect(() => {
+    // Récupérer le nombre réel de chambres depuis la DB
+    fetch('/api/rooms')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          const rooms = data.data || [];
+          setRoomCount(rooms.length);
+        }
+      })
+      .catch(err => console.error('Erreur:', err));
+    
+    // Récupérer le contenu de la section
+    fetch('/api/cms/sections')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.data?.hero) {
+          setContent(prev => ({
+            ...prev,
+            ...data.data.hero
+          }));
+        }
+      })
+      .catch(err => console.error('Erreur:', err));
+  }, []);
   const ref = useRef(null);
   const { scrollYProgress } = useScroll({
     target: ref,
@@ -49,10 +83,10 @@ export const HeroSection = () => {
           transition={{ duration: 1, delay: 0.5 }}
           className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-black mb-6 leading-[1.1]"
         >
-          Créateur de liens
+          {content.title}
           <br />
           <span className="relative">
-            en Bretagne
+            {content.subtitle}
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: "100%" }}
@@ -68,7 +102,7 @@ export const HeroSection = () => {
           transition={{ duration: 0.8, delay: 0.8 }}
           className="text-lg sm:text-xl md:text-2xl text-gray-700 mb-12 max-w-4xl mx-auto font-light leading-relaxed"
         >
-          Une maison moderne à Bruz avec 9 chambres uniques.
+          {content.description || `Une maison moderne à Bruz avec ${roomCount || ''} chambres uniques.`}
           <br className="hidden sm:block" />
           Le co-living nouvelle génération pour créer des liens authentiques.
         </motion.p>
@@ -104,8 +138,8 @@ export const HeroSection = () => {
           className="grid grid-cols-3 gap-8 mt-16 pt-16 border-t border-black/10"
         >
           <div className="text-center">
-            <div className="text-3xl sm:text-4xl font-bold text-black mb-2">9</div>
-            <div className="text-sm sm:text-base text-gray-600">Chambres uniques</div>
+            <div className="text-3xl sm:text-4xl font-bold text-black mb-2">{roomCount || '-'}</div>
+            <div className="text-sm sm:text-base text-gray-600">Chambres {roomCount > 1 ? 'uniques' : 'unique'}</div>
           </div>
           <div className="text-center">
             <div className="text-3xl sm:text-4xl font-bold text-black mb-2">180m²</div>

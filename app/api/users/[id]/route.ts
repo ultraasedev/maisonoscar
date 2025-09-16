@@ -1,35 +1,23 @@
 // Fichier : app/api/users/[id]/route.ts
-// Description : API CRUD pour un utilisateur spécifique (Next.js 15)
+// Description : API pour gérer un utilisateur spécifique
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 
-// === ENUMS PRISMA === //
-const UserRoleEnum = ['ADMIN', 'MANAGER', 'RESIDENT', 'PROSPECT'] as const
-const UserStatusEnum = ['ACTIVE', 'INACTIVE', 'PENDING', 'SUSPENDED'] as const
-type UserRole = typeof UserRoleEnum[number]
-type UserStatus = typeof UserStatusEnum[number]
-
 // === VALIDATION SCHEMAS === //
 
 const UpdateUserSchema = z.object({
   email: z.string().email().optional(),
-  phone: z.string().optional(),
-  firstName: z.string().min(2).optional(),
-  lastName: z.string().min(2).optional(),
-  birthDate: z.string().datetime().optional().transform(val => val ? new Date(val) : undefined),
-  role: z.enum(UserRoleEnum).optional(),
-  status: z.enum(UserStatusEnum).optional(),
-  profession: z.string().optional(),
-  school: z.string().optional(),
-  emergencyContact: z.string().optional(),
-  emergencyPhone: z.string().optional(),
-  bio: z.string().optional(),
-  profileImage: z.string().url().optional(),
+  firstName: z.string().min(1).optional(),
+  lastName: z.string().min(1).optional(),
+  phone: z.string().optional().nullable(),
+  role: z.enum(['ADMIN', 'MANAGER']).optional(),
+  status: z.enum(['ACTIVE', 'INACTIVE', 'PENDING', 'SUSPENDED']).optional(),
+  password: z.string().min(6).optional()
 })
 
-// === GET - Récupérer un utilisateur par ID === //
+// === GET - Récupérer un utilisateur === //
 
 export async function GET(
   request: NextRequest,
@@ -37,7 +25,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params
-
+    
     const user = await prisma.user.findUnique({
       where: { id },
       select: {
@@ -46,96 +34,39 @@ export async function GET(
         firstName: true,
         lastName: true,
         phone: true,
-        birthDate: true,
         role: true,
         status: true,
+        birthDate: true,
         profession: true,
         school: true,
-        emergencyContact: true,
-        emergencyPhone: true,
         bio: true,
         profileImage: true,
         createdAt: true,
         updatedAt: true,
- 
-        bookings: {
-          include: {
-            room: {
-              select: {
-                id: true,
-                name: true,
-                number: true,
-                price: true
-              }
-            },
-            payments: {
-              select: {
-                id: true,
-                amount: true,
-                dueDate: true,
-                paidDate: true,
-                status: true,
-                paymentType: true
-              }
-            }
-          },
-          orderBy: { createdAt: 'desc' }
-        },
-        payments: {
+        _count: {
           select: {
-            id: true,
-            amount: true,
-            dueDate: true,
-            paidDate: true,
-            status: true,
-            paymentType: true,
-            booking: {
-              select: {
-                room: {
-                  select: {
-                    name: true,
-                    number: true
-                  }
-                }
-              }
-            }
-          },
-          orderBy: { dueDate: 'desc' },
-          take: 10
+            bookings: true,
+            contacts: true,
+            payments: true
+          }
         }
       }
     })
 
     if (!user) {
       return NextResponse.json(
-        { success: false, error: 'Utilisateur non trouvé' },
+        { success: false, error: 'Utilisateur introuvable' },
         { status: 404 }
       )
     }
 
-    // Calculer des statistiques avec types stricts
-    const stats = {
-      totalBookings: user.bookings.length,
-      activeBookings: user.bookings.filter((b: { status: string }) => b.status === 'ACTIVE').length,
-      totalPaid: user.payments
-        .filter((p: { status: string }) => p.status === 'PAID')
-        .reduce((sum: number, p: { amount: number }) => sum + p.amount, 0),
-      pendingPayments: user.payments.filter((p: { status: string }) => p.status === 'PENDING').length,
-      overduePayments: user.payments.filter((p: { status: string; dueDate: Date }) => 
-        p.status === 'LATE' || (p.status === 'PENDING' && new Date(p.dueDate) < new Date())
-      ).length
-    }
-
     return NextResponse.json({
       success: true,
-      data: {
-        ...user,
-        stats
-      }
+      data: user
     })
 
   } catch (error) {
-    console.error(`Erreur GET /api/users:`, error)
+    console.error('Erreur GET /api/users/[id]:', error)
     return NextResponse.json(
       { success: false, error: 'Erreur lors de la récupération de l\'utilisateur' },
       { status: 500 }
@@ -143,16 +74,18 @@ export async function GET(
   }
 }
 
-// === PUT - Mettre à jour un utilisateur === //
 
-export async function PUT(
+
+// === PATCH - Mettre à jour un utilisateur === //
+
+export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params
     const body = await request.json()
-
+    
     // Validation des données
     const validatedData = UpdateUserSchema.parse(body)
 
@@ -163,68 +96,32 @@ export async function PUT(
 
     if (!existingUser) {
       return NextResponse.json(
-        { success: false, error: 'Utilisateur non trouvé' },
+        { success: false, error: 'Utilisateur introuvable' },
         { status: 404 }
       )
     }
 
-    // Si l'email change, vérifier qu'il n'existe pas déjà
+    // Vérifier l'unicité de l'email si modifié
     if (validatedData.email && validatedData.email !== existingUser.email) {
-      const userWithEmail = await prisma.user.findUnique({
+      const emailExists = await prisma.user.findUnique({
         where: { email: validatedData.email }
       })
 
-      if (userWithEmail && userWithEmail.id !== id) {
+      if (emailExists) {
         return NextResponse.json(
-          { success: false, error: 'Un utilisateur avec cet email existe déjà' },
+          { success: false, error: 'Cet email est déjà utilisé' },
           { status: 400 }
         )
       }
     }
 
-    // Vérifications de sécurité pour les admins
-    if (existingUser.role === 'ADMIN' && validatedData.role && validatedData.role !== 'ADMIN') {
-      // Vérifier qu'il reste au moins un admin
-      const totalAdmins = await prisma.user.count({
-        where: { role: 'ADMIN' }
-      })
-
-      if (totalAdmins <= 1) {
-        return NextResponse.json(
-          { 
-            success: false, 
-            error: 'Impossible de modifier le rôle du dernier administrateur' 
-          },
-          { status: 400 }
-        )
-      }
-    }
-
-    // Vérifications business logic
-    if (validatedData.status === 'INACTIVE' || validatedData.status === 'SUSPENDED') {
-      // Vérifier qu'il n'y a pas de réservations actives
-      const activeBookings = await prisma.booking.findMany({
-        where: {
-          userId: id,
-          status: { in: ['ACTIVE', 'CONFIRMED'] }
-        }
-      })
-
-      if (activeBookings.length > 0) {
-        return NextResponse.json(
-          { 
-            success: false, 
-            error: 'Impossible de désactiver un utilisateur avec des réservations actives' 
-          },
-          { status: 400 }
-        )
-      }
-    }
+    // Retirer le mot de passe des données (géré séparément)
+    const { password, ...updateData } = validatedData
 
     // Mettre à jour l'utilisateur
-    const updatedUser = await prisma.user.update({
+    const user = await prisma.user.update({
       where: { id },
-      data: validatedData,
+      data: updateData,
       select: {
         id: true,
         email: true,
@@ -233,15 +130,14 @@ export async function PUT(
         phone: true,
         role: true,
         status: true,
-        profession: true,
-        school: true,
+        createdAt: true,
         updatedAt: true
       }
     })
 
     return NextResponse.json({
       success: true,
-      data: updatedUser,
+      data: user,
       message: 'Utilisateur mis à jour avec succès'
     })
 
@@ -251,13 +147,16 @@ export async function PUT(
         { 
           success: false, 
           error: 'Données invalides',
-          details: error.issues
+          details: error.issues.map(issue => ({
+            field: issue.path.join('.'),
+            message: issue.message
+          }))
         },
         { status: 400 }
       )
     }
 
-    console.error(`Erreur PUT /api/users:`, error)
+    console.error('Erreur PATCH /api/users/[id]:', error)
     return NextResponse.json(
       { success: false, error: 'Erreur lors de la mise à jour de l\'utilisateur' },
       { status: 500 }
@@ -273,55 +172,35 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
-
+    
     // Vérifier que l'utilisateur existe
-    const existingUser = await prisma.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { id },
       include: {
-        bookings: {
-          where: {
-            status: { in: ['ACTIVE', 'CONFIRMED', 'PENDING'] }
-          }
-        }
+        bookings: true,
+        payments: true
       }
     })
 
-    if (!existingUser) {
+    if (!user) {
       return NextResponse.json(
-        { success: false, error: 'Utilisateur non trouvé' },
+        { success: false, error: 'Utilisateur introuvable' },
         { status: 404 }
       )
     }
 
-    // Vérifier qu'il n'y a pas de réservations actives
-    if (existingUser.bookings.length > 0) {
+    // Ne pas permettre la suppression si l'utilisateur a des données liées
+    if (user.bookings.length > 0 || user.payments.length > 0) {
       return NextResponse.json(
         { 
           success: false, 
-          error: 'Impossible de supprimer un utilisateur avec des réservations actives' 
+          error: 'Impossible de supprimer un utilisateur avec des réservations ou paiements' 
         },
         { status: 400 }
       )
     }
 
-    // Vérifier qu'on ne supprime pas le dernier admin
-    if (existingUser.role === 'ADMIN') {
-      const totalAdmins = await prisma.user.count({
-        where: { role: 'ADMIN' }
-      })
-
-      if (totalAdmins <= 1) {
-        return NextResponse.json(
-          { 
-            success: false, 
-            error: 'Impossible de supprimer le dernier administrateur' 
-          },
-          { status: 400 }
-        )
-      }
-    }
-
-    // Supprimer l'utilisateur (les réservations terminées restent pour l'historique)
+    // Supprimer l'utilisateur
     await prisma.user.delete({
       where: { id }
     })
@@ -332,67 +211,9 @@ export async function DELETE(
     })
 
   } catch (error) {
-    console.error(`Erreur DELETE /api/users:`, error)
+    console.error('Erreur DELETE /api/users/[id]:', error)
     return NextResponse.json(
       { success: false, error: 'Erreur lors de la suppression de l\'utilisateur' },
-      { status: 500 }
-    )
-  }
-}
-
-// === PATCH - Actions spécifiques === //
-
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params
-    const body = await request.json()
-    const { action } = body
-
-    switch (action) {
-      case 'toggle_status':
-        // Basculer entre ACTIVE et INACTIVE
-        const user = await prisma.user.findUnique({ where: { id } })
-        if (!user) {
-          return NextResponse.json(
-            { success: false, error: 'Utilisateur non trouvé' },
-            { status: 404 }
-          )
-        }
-
-        const newStatus = user.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'
-        
-        const updatedUser = await prisma.user.update({
-          where: { id },
-          data: { status: newStatus }
-        })
-
-        return NextResponse.json({
-          success: true,
-          data: updatedUser,
-          message: `Utilisateur ${newStatus === 'ACTIVE' ? 'activé' : 'désactivé'}`
-        })
-
-      case 'reset_password':
-        // TODO: Implémenter la réinitialisation de mot de passe
-        return NextResponse.json({
-          success: true,
-          message: 'Email de réinitialisation envoyé'
-        })
-
-      default:
-        return NextResponse.json(
-          { success: false, error: 'Action non reconnue' },
-          { status: 400 }
-        )
-    }
-
-  } catch (error) {
-    console.error(`Erreur PATCH /api/users:`, error)
-    return NextResponse.json(
-      { success: false, error: 'Erreur lors de l\'action sur l\'utilisateur' },
       { status: 500 }
     )
   }

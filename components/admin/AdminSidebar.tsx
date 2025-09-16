@@ -13,7 +13,10 @@ import {
   CreditCard, 
   MessageSquare, 
   Settings,
-  X
+  X,
+  Shield,
+  FileText,
+  Edit3
 } from 'lucide-react'
 
 const navigation = [
@@ -28,12 +31,12 @@ const navigation = [
     icon: Home
   },
   {
-    name: 'Locataires & Prospect',
-    href: '/admin/users',
+    name: 'Mes demandes',
+    href: '/admin/prospects',
     icon: Users
   },
   {
-    name: 'Réservations',
+    name: 'Mes locations',
     href: '/admin/bookings',
     icon: Calendar
   },
@@ -46,6 +49,21 @@ const navigation = [
     name: 'Messages',
     href: '/admin/contacts',
     icon: MessageSquare
+  },
+  {
+    name: 'Contrats',
+    href: '/admin/contracts',
+    icon: FileText
+  },
+  {
+    name: 'Gestionnaire',
+    href: '/admin/users',
+    icon: Shield
+  },
+  {
+    name: 'Gestion contenu',
+    href: '/admin/cms',
+    icon: Edit3
   },
   {
     name: 'Paramètres',

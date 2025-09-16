@@ -1,12 +1,13 @@
 // Fichier : hooks/useRooms.ts
-// Hook personnalisé pour la gestion des chambres
+// Hook personnalisé pour la gestion des chambres - HARMONISÉ AVEC SCHEMA PRISMA
 
 'use client'
 
 import { useState, useCallback } from 'react'
 import useApi, { useMutation } from '@/hooks/useApi'
+import { RoomStatus } from '@prisma/client'
 
-// Types pour les chambres
+// Types pour les chambres - HARMONISÉ avec le schema Prisma
 export interface Room {
   id: string
   name: string
@@ -14,7 +15,7 @@ export interface Room {
   price: number
   surface: number
   floor: number
-  status: 'AVAILABLE' | 'OCCUPIED' | 'MAINTENANCE' | 'RESERVED'
+  status: RoomStatus // Utilise directement l'enum Prisma: AVAILABLE | OCCUPIED | MAINTENANCE | UNAVAILABLE
   description?: string
   amenities: string[]
   images: string[]
@@ -26,6 +27,7 @@ export interface Room {
   hasWindow: boolean
   virtualTour?: string
   isVirtualTourActive: boolean
+  isActive: boolean
   // Nouveaux champs
   bedType: 'SINGLE' | 'DOUBLE' | 'BUNK' | 'QUEEN' | 'KING'
   bedCount: number
@@ -87,7 +89,7 @@ export interface CreateRoomData {
 }
 
 export interface UpdateRoomData extends Partial<CreateRoomData> {
-  status?: Room['status']
+  status?: RoomStatus
   isActive?: boolean
 }
 
@@ -143,6 +145,11 @@ export function useRoomMutations() {
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // clearError stable avec useCallback
+  const clearError = useCallback(() => {
+    setError(null)
+  }, [])
 
   // Créer une chambre
   const createRoom = useCallback(async (data: CreateRoomData) => {
@@ -235,8 +242,8 @@ export function useRoomMutations() {
     }
   }, [bulkUpdateMutation])
 
-  // Actions rapides
-  const toggleRoomStatus = useCallback(async (roomId: string, newStatus: Room['status']) => {
+  // Actions rapides - Utilise maintenant RoomStatus de Prisma
+  const toggleRoomStatus = useCallback(async (roomId: string, newStatus: RoomStatus) => {
     return updateRoom(roomId, { status: newStatus })
   }, [updateRoom])
 
@@ -260,10 +267,7 @@ export function useRoomMutations() {
     error: error || createMutation.error || updateMutation.error || deleteMutation.error || bulkUpdateMutation.error,
     
     // Reset des erreurs
-    clearError: () => {
-      setError(null)
-      // Les mutations n'ont pas de méthode reset dans votre implémentation
-    }
+    clearError
   }
 }
 

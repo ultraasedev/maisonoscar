@@ -1,31 +1,103 @@
 // Fichier : app/api/rooms/[id]/route.ts
-// Description : API CRUD pour une chambre spécifique (Next.js 15)
+// Description : API CRUD pour une chambre spécifique - CORRIGÉE COMPATIBLE SCHEMA PRISMA
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 
-// === VALIDATION SCHEMAS === //
+// === VALIDATION SCHEMA === //
 
 const UpdateRoomSchema = z.object({
+  // Champs de base
   name: z.string().min(1).optional(),
   number: z.number().int().positive().optional(),
   price: z.number().positive().optional(),
   surface: z.number().positive().optional(),
-  description: z.string().min(10).optional(),
+  description: z.string().optional(),
+  
+  // Statut et activation
   status: z.enum(['AVAILABLE', 'OCCUPIED', 'MAINTENANCE', 'UNAVAILABLE']).optional(),
   isActive: z.boolean().optional(),
+  
+  // Localisation
+  floor: z.number().int().min(0).optional(),
+  orientation: z.string().optional(),
+  exposure: z.enum(['SUNNY', 'SHADED', 'MIXED']).optional(),
+  
+  // Équipements de base
   hasPrivateBathroom: z.boolean().optional(),
   hasBalcony: z.boolean().optional(),
   hasDesk: z.boolean().optional(),
   hasCloset: z.boolean().optional(),
   hasWindow: z.boolean().optional(),
-  floor: z.number().int().min(0).optional(),
-  orientation: z.string().optional(),
-  images: z.array(z.string().url()).optional(),
-  virtualTour: z.string().url().optional(),
+  hasTV: z.boolean().optional(),
+  
+  // Couchage - UTILISER LES CHAMPS PRISMA EXISTANTS
+  bedType: z.enum(['SINGLE', 'DOUBLE', 'BUNK', 'QUEEN', 'KING']).optional(),
+  bedCount: z.number().int().min(1).optional(),
+  sheetsProvided: z.boolean().optional(),
+  
+  // Support des configurations multiples (pour le frontend)
+  bedConfigurations: z.array(z.object({
+    type: z.enum(['SINGLE', 'DOUBLE', 'BUNK', 'QUEEN', 'KING']),
+    count: z.number().int().min(1).max(4)
+  })).optional(),
+  
+  // Cuisine
+  kitchenType: z.enum(['SHARED', 'PRIVATE', 'KITCHENETTE']).optional(),
+  kitchenEquipment: z.array(z.string()).optional(),
+  hasMicrowave: z.boolean().optional(),
+  hasOven: z.boolean().optional(),
+  hasCookingPlates: z.boolean().optional(),
+  cookingPlateType: z.enum(['GAS', 'INDUCTION', 'ELECTRIC']).optional(),
+  
+  // Règlement
+  petsAllowed: z.boolean().optional(),
+  smokingAllowed: z.boolean().optional(),
+  
+  // Images
+  images: z.array(z.string()).optional(),
+  virtualTour: z.string().optional(),
   isVirtualTourActive: z.boolean().optional(),
+  
+  // Frontend only fields (ignorés par l'API)
+  imageFiles: z.array(z.any()).optional(),
+  paymentConfig: z.object({
+    rentDueDay: z.number().int().min(1).max(31),
+    securityDepositType: z.enum(['ONE_MONTH', 'TWO_MONTHS', 'CUSTOM']),
+    securityDepositAmount: z.number().optional()
+  }).optional()
 })
+
+// === FONCTIONS UTILITAIRES === //
+
+function processBedConfigurations(bedConfigs?: any[]) {
+  if (!bedConfigs || bedConfigs.length === 0) {
+    return {}
+  }
+
+  // Premier lit comme type principal (compatibilité schema Prisma)
+  const primaryBed = bedConfigs[0]
+  const totalBeds = bedConfigs.reduce((sum, bed) => sum + bed.count, 0)
+
+  return {
+    bedType: primaryBed.type,
+    bedCount: totalBeds
+  }
+}
+
+function processRoomForFrontend(room: any) {
+  return {
+    ...room,
+    // Ajouter bedConfigurations pour le frontend
+    bedConfigurations: [{ type: room.bedType, count: room.bedCount }],
+    // Ajouter paymentConfig par défaut
+    paymentConfig: {
+      rentDueDay: 1,
+      securityDepositType: 'ONE_MONTH'
+    }
+  }
+}
 
 // === GET - Récupérer une chambre par ID === //
 
@@ -67,38 +139,28 @@ export async function GET(
       )
     }
 
-    // Calculer des statistiques avec types
-    interface BookingWithUser {
-      status: string
-      monthlyRent: number
-      user?: {
-        id: string
-        firstName: string
-        lastName: string
-        email: string
-        phone: string | null
-      }
-    }
-
+    // Calculer des statistiques
     const stats = {
       totalBookings: room.bookings.length,
-      activeBookings: room.bookings.filter((b: BookingWithUser) => b.status === 'ACTIVE').length,
+      activeBookings: room.bookings.filter((b: any) => b.status === 'ACTIVE').length,
       totalRevenue: room.bookings
-        .filter((b: BookingWithUser) => b.status === 'ACTIVE')
-        .reduce((sum: number, b: BookingWithUser) => sum + b.monthlyRent, 0),
-      currentTenant: room.bookings.find((b: BookingWithUser) => b.status === 'ACTIVE')?.user || null
+        .filter((b: any) => b.status === 'ACTIVE')
+        .reduce((sum: number, b: any) => sum + (b.monthlyRent || 0), 0),
+      currentTenant: room.bookings.find((b: any) => b.status === 'ACTIVE')?.user || null
     }
+
+    const processedRoom = processRoomForFrontend(room)
 
     return NextResponse.json({
       success: true,
       data: {
-        ...room,
+        ...processedRoom,
         stats
       }
     })
 
   } catch (error) {
-    console.error(`Erreur GET /api/rooms:`, error)
+    console.error(`Erreur GET /api/rooms/[id]:`, error)
     return NextResponse.json(
       { success: false, error: 'Erreur lors de la récupération de la chambre' },
       { status: 500 }
@@ -116,8 +178,12 @@ export async function PUT(
     const { id } = await params
     const body = await request.json()
 
+    console.log('📥 Données reçues pour modification:', body)
+
     // Validation des données
     const validatedData = UpdateRoomSchema.parse(body)
+
+    console.log('✅ Données validées:', validatedData)
 
     // Vérifier que la chambre existe
     const existingRoom = await prisma.room.findUnique({
@@ -147,7 +213,6 @@ export async function PUT(
 
     // Vérifications business logic
     if (validatedData.status === 'UNAVAILABLE' || validatedData.isActive === false) {
-      // Vérifier qu'il n'y a pas de réservations actives
       const activeBookings = await prisma.booking.findMany({
         where: {
           roomId: id,
@@ -166,10 +231,23 @@ export async function PUT(
       }
     }
 
+    // Traitement des configurations de lits
+    const bedData = processBedConfigurations(validatedData.bedConfigurations)
+
+    // Préparation des données pour la mise à jour (EXCLURE les champs frontend)
+    const { bedConfigurations, imageFiles, paymentConfig, ...updateData } = validatedData
+
+    const dataToUpdate = {
+      ...updateData,
+      ...bedData
+    }
+
+    console.log('💾 Données pour mise à jour Prisma:', dataToUpdate)
+
     // Mettre à jour la chambre
     const updatedRoom = await prisma.room.update({
       where: { id },
-      data: validatedData,
+      data: dataToUpdate,
       include: {
         bookings: {
           where: { status: 'ACTIVE' },
@@ -187,25 +265,33 @@ export async function PUT(
       }
     })
 
+    const processedRoom = processRoomForFrontend(updatedRoom)
+
+    console.log('🎉 Chambre modifiée avec succès:', updatedRoom.id)
+
     return NextResponse.json({
       success: true,
-      data: updatedRoom,
+      data: processedRoom,
       message: 'Chambre mise à jour avec succès'
     })
 
   } catch (error) {
     if (error instanceof z.ZodError) {
+      console.error('❌ Erreur de validation Zod:', error.issues)
       return NextResponse.json(
         { 
           success: false, 
           error: 'Données invalides',
-          details: error.issues
+          details: error.issues.map(issue => ({
+            field: issue.path.join('.'),
+            message: issue.message
+          }))
         },
         { status: 400 }
       )
     }
 
-    console.error(`Erreur PUT /api/rooms:`, error)
+    console.error(`❌ Erreur PUT /api/rooms/[id]:`, error)
     return NextResponse.json(
       { success: false, error: 'Erreur lors de la mise à jour de la chambre' },
       { status: 500 }
@@ -252,7 +338,7 @@ export async function DELETE(
       )
     }
 
-    // Supprimer la chambre (les réservations terminées restent pour l'historique)
+    // Supprimer la chambre
     await prisma.room.delete({
       where: { id }
     })
@@ -263,7 +349,7 @@ export async function DELETE(
     })
 
   } catch (error) {
-    console.error(`Erreur DELETE /api/rooms:`, error)
+    console.error(`Erreur DELETE /api/rooms/[id]:`, error)
     return NextResponse.json(
       { success: false, error: 'Erreur lors de la suppression de la chambre' },
       { status: 500 }
@@ -284,7 +370,6 @@ export async function PATCH(
 
     switch (action) {
       case 'toggle_availability':
-        // Basculer entre AVAILABLE et UNAVAILABLE
         const room = await prisma.room.findUnique({ where: { id } })
         if (!room) {
           return NextResponse.json(
@@ -300,14 +385,15 @@ export async function PATCH(
           data: { status: newStatus }
         })
 
+        const processedRoom = processRoomForFrontend(updatedRoom)
+
         return NextResponse.json({
           success: true,
-          data: updatedRoom,
+          data: processedRoom,
           message: `Chambre ${newStatus === 'AVAILABLE' ? 'disponible' : 'indisponible'}`
         })
 
       case 'activate_3d_tour':
-        // Activer/désactiver la visite 3D
         const roomFor3D = await prisma.room.findUnique({ where: { id } })
         if (!roomFor3D) {
           return NextResponse.json(
@@ -321,9 +407,11 @@ export async function PATCH(
           data: { isVirtualTourActive: !roomFor3D.isVirtualTourActive }
         })
 
+        const processed3DRoom = processRoomForFrontend(updated3DRoom)
+
         return NextResponse.json({
           success: true,
-          data: updated3DRoom,
+          data: processed3DRoom,
           message: `Visite 3D ${updated3DRoom.isVirtualTourActive ? 'activée' : 'désactivée'}`
         })
 
@@ -335,7 +423,7 @@ export async function PATCH(
     }
 
   } catch (error) {
-    console.error(`Erreur PATCH /api/rooms:`, error)
+    console.error(`Erreur PATCH /api/rooms/[id]:`, error)
     return NextResponse.json(
       { success: false, error: 'Erreur lors de l\'action sur la chambre' },
       { status: 500 }

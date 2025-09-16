@@ -4,6 +4,7 @@
 import { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { prisma } from '@/lib/prisma'
+import bcrypt from 'bcryptjs'
 
 declare module 'next-auth' {
   interface Session {
@@ -13,6 +14,7 @@ declare module 'next-auth' {
       name: string
       role: string
       isAdmin: boolean
+      mustChangePassword?: boolean
     }
   }
 
@@ -22,6 +24,7 @@ declare module 'next-auth' {
     name: string
     role: string
     isAdmin: boolean
+    mustChangePassword?: boolean
   }
 }
 
@@ -30,6 +33,7 @@ declare module 'next-auth/jwt' {
     id: string
     role: string
     isAdmin: boolean
+    mustChangePassword?: boolean
   }
 }
 
@@ -46,17 +50,9 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Email et mot de passe requis')
         }
 
-        // Identifiants hardcodés pour le développement
-        const adminEmail = 'admin@maisonoscar.fr'
-        const adminPassword = 'admin123'
-
-        if (credentials.email !== adminEmail || credentials.password !== adminPassword) {
-          throw new Error('Identifiants incorrects')
-        }
-
         try {
-          // Rechercher l'utilisateur admin dans la base
-          let user = await prisma.user.findUnique({
+          // Rechercher l'utilisateur avec son auth
+          const user = await prisma.user.findUnique({
             where: { 
               email: credentials.email
             },
@@ -66,50 +62,110 @@ export const authOptions: NextAuthOptions = {
               firstName: true,
               lastName: true,
               role: true,
-              status: true
+              status: true,
+              auth: {
+                select: {
+                  hashedPassword: true,
+                  mustChangePassword: true,
+                  failedAttempts: true,
+                  lockedUntil: true
+                }
+              }
             }
           })
 
-          // Si l'admin n'existe pas, le créer
           if (!user) {
-            user = await prisma.user.create({
-              data: {
-                email: credentials.email,
-                firstName: 'Admin',
-                lastName: 'Maison Oscar',
-                role: 'ADMIN',
-                status: 'ACTIVE'
-              },
-              select: {
-                id: true,
-                email: true,
-                firstName: true,
-                lastName: true,
-                role: true,
-                status: true
-              }
-            })
+            throw new Error('Identifiants incorrects')
           }
 
-          // Vérifications
-          if (user.role !== 'ADMIN') {
-            throw new Error('Accès non autorisé - rôle insuffisant')
+          // Vérifier si le compte est verrouillé
+          if (user.auth?.lockedUntil && user.auth.lockedUntil > new Date()) {
+            throw new Error('Compte temporairement verrouillé')
           }
 
+          // Vérifications du statut
           if (user.status !== 'ACTIVE') {
             throw new Error('Compte désactivé')
           }
+
+          // Vérifier le rôle (seulement ADMIN et MANAGER peuvent accéder au dashboard)
+          if (user.role !== 'ADMIN' && user.role !== 'MANAGER') {
+            throw new Error('Accès non autorisé')
+          }
+
+          // Si pas d'auth, créer avec mot de passe par défaut (pour migration)
+          if (!user.auth) {
+            const defaultPassword = 'admin123'
+            const hashedPassword = await bcrypt.hash(defaultPassword, 10)
+            
+            await prisma.auth.create({
+              data: {
+                userId: user.id,
+                hashedPassword,
+                mustChangePassword: true
+              }
+            })
+
+            // Vérifier avec le mot de passe par défaut
+            if (credentials.password !== defaultPassword) {
+              throw new Error('Identifiants incorrects')
+            }
+
+            return {
+              id: user.id,
+              email: user.email,
+              name: `${user.firstName} ${user.lastName}`,
+              role: user.role,
+              isAdmin: user.role === 'ADMIN',
+              mustChangePassword: true
+            }
+          }
+
+          // Vérifier le mot de passe
+          const isValidPassword = await bcrypt.compare(
+            credentials.password,
+            user.auth.hashedPassword
+          )
+
+          if (!isValidPassword) {
+            // Incrémenter les tentatives échouées
+            await prisma.auth.update({
+              where: { userId: user.id },
+              data: {
+                failedAttempts: (user.auth.failedAttempts || 0) + 1,
+                // Verrouiller après 5 tentatives pour 15 minutes
+                lockedUntil: user.auth.failedAttempts >= 4 
+                  ? new Date(Date.now() + 15 * 60 * 1000)
+                  : null
+              }
+            })
+            throw new Error('Identifiants incorrects')
+          }
+
+          // Réinitialiser les tentatives échouées et mettre à jour lastLogin
+          await prisma.auth.update({
+            where: { userId: user.id },
+            data: {
+              failedAttempts: 0,
+              lockedUntil: null,
+              lastLogin: new Date()
+            }
+          })
 
           return {
             id: user.id,
             email: user.email,
             name: `${user.firstName} ${user.lastName}`,
             role: user.role,
-            isAdmin: user.role === 'ADMIN'
+            isAdmin: user.role === 'ADMIN',
+            mustChangePassword: user.auth.mustChangePassword || false
           }
 
-        } catch (dbError) {
-          throw new Error('Erreur de connexion à la base de données')
+        } catch (error) {
+          if (error instanceof Error) {
+            throw error
+          }
+          throw new Error('Erreur de connexion')
         }
       }
     })
@@ -121,20 +177,37 @@ export const authOptions: NextAuthOptions = {
   },
 
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
+      // Si c'est une nouvelle connexion
       if (user) {
         token.id = user.id
         token.role = user.role
         token.isAdmin = user.isAdmin
+        token.mustChangePassword = user.mustChangePassword
       }
+      
+      // Si c'est une mise à jour de session (après changement de mot de passe)
+      if (trigger === 'update' && session) {
+        // Récupérer l'état actuel depuis la DB
+        const currentUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          include: { auth: true }
+        })
+        
+        if (currentUser?.auth) {
+          token.mustChangePassword = currentUser.auth.mustChangePassword
+        }
+      }
+      
       return token
     },
 
     async session({ session, token }) {
       if (token) {
-        session.user.id = token.id
-        session.user.role = token.role
-        session.user.isAdmin = token.isAdmin
+        session.user.id = token.id as string
+        session.user.role = token.role as string
+        session.user.isAdmin = token.isAdmin as boolean
+        session.user.mustChangePassword = token.mustChangePassword as boolean
       }
       return session
     },

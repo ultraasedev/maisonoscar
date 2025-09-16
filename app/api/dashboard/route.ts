@@ -254,6 +254,78 @@ export async function GET(request: NextRequest) {
       createdAt: contact.createdAt
     }))
 
+    // Si la DB est vide, retourner des données mock
+    if (totalUsers === 0 && totalRooms === 0 && totalBookings === 0) {
+      const mockData = {
+        overview: {
+          totalUsers: 12,
+          totalRooms: 8,
+          totalBookings: 6,
+          totalContacts: 24,
+          activeBookings: 6,
+          occupiedRooms: 6,
+          availableRooms: 2,
+          pendingPayments: 2,
+          latePayments: 0,
+          occupancyRate: 75,
+          monthlyRevenue: 3480
+        },
+        trends: {
+          period: daysAgo,
+          recentBookings: 2,
+          recentPayments: 8,
+          recentContacts: 5,
+          monthlyRevenueData: [
+            { month: 'Sept', revenue: 2800 },
+            { month: 'Oct', revenue: 3100 },
+            { month: 'Nov', revenue: 3480 },
+            { month: 'Déc', revenue: 3480 }
+          ]
+        },
+        roomRevenue: [
+          { roomId: '1', roomName: 'Chambre 1', revenue: 520, roomNumber: 1 },
+          { roomId: '2', roomName: 'Chambre 2', revenue: 550, roomNumber: 2 },
+          { roomId: '3', roomName: 'Chambre 3', revenue: 680, roomNumber: 3 }
+        ],
+        upcomingPayments: [
+          {
+            id: '1',
+            amount: 520,
+            dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
+            tenant: 'Marie Martin',
+            room: 'Chambre Océan (1)',
+            isOverdue: false
+          },
+          {
+            id: '2',
+            amount: 680,
+            dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+            tenant: 'Paul Durand',
+            room: 'Chambre Soleil (3)',
+            isOverdue: false
+          }
+        ],
+        newContacts: [
+          {
+            id: '1',
+            name: 'Sophie Bernard',
+            email: 'sophie@example.com',
+            subject: 'Disponibilité chambre',
+            type: 'BOOKING',
+            createdAt: new Date()
+          }
+        ],
+        chartData: {
+          occupancy: [75, 70, 72, 75, 73, 75],
+          revenue: [3000, 3100, 3200, 3400, 3480, 3480],
+          bookings: [2, 1, 2, 1, 2, 1],
+          labels: ['Juillet', 'Août', 'Sept', 'Oct', 'Nov', 'Déc']
+        }
+      }
+      
+      return NextResponse.json({ success: true, data: mockData })
+    }
+
     const dashboardData = {
       // Statistiques principales
       overview: {

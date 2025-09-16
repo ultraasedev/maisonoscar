@@ -6,6 +6,9 @@ import { SessionProvider } from '@/components/providers/SessionProvider'
 import { Toaster } from 'sonner'
 import { Navigation } from '@/components/layout/Navigation'
 import { Footer } from '@/components/layout/Footer'
+import { GoogleAnalytics } from './analytics'
+import { CookieConsent } from '@/components/CookieConsent'
+import { SchemaOrg } from '@/components/SchemaOrg'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -104,6 +107,9 @@ export default function RootLayout({
         
         {/* Preload de ressources critiques */}
         <link rel="preload" href="/images/hero-bg.jpg" as="image" />
+        
+        {/* Schema.org structured data */}
+        <SchemaOrg />
       </head>
       <body 
         className="min-h-screen bg-white font-sans antialiased"
@@ -126,32 +132,13 @@ export default function RootLayout({
               },
             }}
           />
+          
+          {/* Cookie Consent Banner */}
+          <CookieConsent />
         </SessionProvider>
 
-        {/* Scripts d'analytics */}
-        {process.env.NODE_ENV === 'production' && (
-          <>
-            {/* Google Analytics */}
-            {process.env.NEXT_PUBLIC_GA_ID && (
-              <>
-                <script
-                  async
-                  src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_ID}`}
-                />
-                <script
-                  dangerouslySetInnerHTML={{
-                    __html: `
-                      window.dataLayer = window.dataLayer || [];
-                      function gtag(){dataLayer.push(arguments);}
-                      gtag('js', new Date());
-                      gtag('config', '${process.env.NEXT_PUBLIC_GA_ID}');
-                    `,
-                  }}
-                />
-              </>
-            )}
-          </>
-        )}
+        {/* Google Analytics */}
+        <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID || ''} />
       </body>
     </html>
   )
