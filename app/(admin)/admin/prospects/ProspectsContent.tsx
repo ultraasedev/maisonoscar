@@ -9,6 +9,7 @@ import {
   CheckCircle, XCircle, FileCheck, Edit2, Trash2, Send
 } from 'lucide-react'
 import { toast } from 'sonner'
+import DocumentViewer from '@/components/admin/DocumentViewer'
 
 interface BookingRequest {
   id: string
@@ -103,6 +104,7 @@ export default function ProspectsContent() {
   const [selectedProspect, setSelectedProspect] = useState<BookingRequest | null>(null)
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [showActionModal, setShowActionModal] = useState(false)
+  const [showDocumentViewer, setShowDocumentViewer] = useState(false)
   const [actionType, setActionType] = useState<'approve' | 'reject' | 'incomplete' | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
@@ -665,7 +667,18 @@ export default function ProspectsContent() {
 
                   {/* Documents */}
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-3">Documents fournis</h3>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-semibold text-gray-900">Documents fournis</h3>
+                      {selectedProspect.documents && Object.keys(selectedProspect.documents).some(key => selectedProspect.documents[key]) && (
+                        <button
+                          onClick={() => setShowDocumentViewer(true)}
+                          className="flex items-center gap-2 px-3 py-1 text-sm bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+                        >
+                          <Eye className="w-4 h-4" />
+                          Visualiser
+                        </button>
+                      )}
+                    </div>
                     <div className="grid grid-cols-2 gap-3">
                       {Object.entries(selectedProspect.documents || {}).map(([key, value]) => (
                         <div key={key} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -830,6 +843,15 @@ export default function ProspectsContent() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Document Viewer */}
+      {selectedProspect && (
+        <DocumentViewer
+          documents={selectedProspect.documents}
+          isOpen={showDocumentViewer}
+          onClose={() => setShowDocumentViewer(false)}
+        />
+      )}
     </div>
   )
 }

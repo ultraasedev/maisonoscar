@@ -183,7 +183,7 @@ function LoginForm() {
             {/* Mot de passe oublié */}
             <div className="text-right">
               <Link 
-                href="/admin/forgot-password"
+                href="/auth/forgot-password"
                 className="text-sm text-gray-600 hover:text-black transition-colors"
               >
                 Mot de passe oublié ?

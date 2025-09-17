@@ -1,13 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
-import { 
-  FileText, Plus, Edit2, Download, Send, Search, 
-  Calendar, User, Euro, Home, Save, X, Eye
-} from 'lucide-react'
-import { toast } from 'sonner'
-import { generateContractPDF } from '@/lib/pdf-generator'
+import ContractsContent from './ContractsContent'
+
+export default function ContractsPage() {
+  return <ContractsContent />
+}
 
 interface Contract {
   id: string

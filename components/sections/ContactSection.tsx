@@ -75,7 +75,7 @@ export const ContactSection = () => {
           firstName,
           lastName,
           email: formData.email,
-          phone: formData.phone,
+          ...(formData.phone && { phone: formData.phone }),
           subject: 'Demande d\'information',
           message: formData.message,
           type: 'QUESTION'

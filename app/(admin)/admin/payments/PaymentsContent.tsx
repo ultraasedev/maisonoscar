@@ -12,16 +12,17 @@ import { toast } from 'sonner'
 
 interface Payment {
   id: string
+  userId: string
+  user: {
+    id: string
+    firstName: string
+    lastName: string
+    email: string
+    phone: string
+  }
   bookingId: string
   booking: {
     id: string
-    user: {
-      id: string
-      firstName: string
-      lastName: string
-      email: string
-      phone: string
-    }
     room: {
       id: string
       name: string
@@ -30,14 +31,15 @@ interface Payment {
     }
   }
   amount: number
-  type: 'RENT' | 'DEPOSIT' | 'CHARGES' | 'FEES'
-  status: 'PENDING' | 'VALIDATED' | 'LATE' | 'CANCELLED'
+  paymentType: 'RENT' | 'DEPOSIT' | 'CHARGES' | 'FEES'
+  status: 'PENDING' | 'PAID' | 'LATE' | 'CANCELLED'
   dueDate: string
   paidDate?: string
-  paymentMethod?: string
-  reference?: string
-  receiptUrl?: string
-  notes?: string
+  isLate: boolean
+  lateDays?: number
+  reminderSent: boolean
+  reminderDate?: string
+  reminderCount: number
   createdAt: string
   updatedAt: string
 }
@@ -63,7 +65,7 @@ interface Tenant {
 
 const statusConfig = {
   PENDING: { label: 'En attente', color: 'bg-yellow-100 text-yellow-700', icon: Clock },
-  VALIDATED: { label: 'Validé', color: 'bg-green-100 text-green-700', icon: CheckCircle },
+  PAID: { label: 'Payé', color: 'bg-green-100 text-green-700', icon: CheckCircle },
   LATE: { label: 'En retard', color: 'bg-red-100 text-red-700', icon: AlertTriangle },
   CANCELLED: { label: 'Annulé', color: 'bg-gray-100 text-gray-700', icon: XCircle }
 }
@@ -75,96 +77,13 @@ const typeLabels = {
   FEES: 'Frais'
 }
 
-// Données de démonstration
-const demoPayments: Payment[] = [
-  {
-    id: '1',
-    bookingId: 'b1',
-    booking: {
-      id: 'b1',
-      user: {
-        id: 'u1',
-        firstName: 'Jean',
-        lastName: 'Dupont',
-        email: 'jean.dupont@email.com',
-        phone: '06 12 34 56 78'
-      },
-      room: {
-        id: 'r1',
-        name: 'Studio Confort',
-        number: 101,
-        price: 450
-      }
-    },
-    amount: 450,
-    type: 'RENT',
-    status: 'PENDING',
-    dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(), // Dans 5 jours
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: '2',
-    bookingId: 'b2',
-    booking: {
-      id: 'b2',
-      user: {
-        id: 'u2',
-        firstName: 'Marie',
-        lastName: 'Martin',
-        email: 'marie.martin@email.com',
-        phone: '06 98 76 54 32'
-      },
-      room: {
-        id: 'r2',
-        name: 'Suite Premium',
-        number: 102,
-        price: 550
-      }
-    },
-    amount: 550,
-    type: 'RENT',
-    status: 'VALIDATED',
-    dueDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-    paidDate: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
-    paymentMethod: 'Virement',
-    reference: 'VIR2024001',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: '3',
-    bookingId: 'b3',
-    booking: {
-      id: 'b3',
-      user: {
-        id: 'u3',
-        firstName: 'Pierre',
-        lastName: 'Dubois',
-        email: 'pierre.dubois@email.com',
-        phone: '06 45 67 89 01'
-      },
-      room: {
-        id: 'r3',
-        name: 'Chambre Économique',
-        number: 103,
-        price: 380
-      }
-    },
-    amount: 380,
-    type: 'RENT',
-    status: 'LATE',
-    dueDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // Retard de 3 jours
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  }
-]
+
 
 export default function PaymentsContent() {
-  const [payments, setPayments] = useState<Payment[]>(demoPayments)
-  const [filteredPayments, setFilteredPayments] = useState<Payment[]>(demoPayments)
+  const [payments, setPayments] = useState<Payment[]>([])
+  const [filteredPayments, setFilteredPayments] = useState<Payment[]>([])
   const [tenants, setTenants] = useState<Tenant[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null)
   const [showValidationModal, setShowValidationModal] = useState(false)
   const [showReceiptModal, setShowReceiptModal] = useState(false)
@@ -185,12 +104,23 @@ export default function PaymentsContent() {
   }, [payments, searchQuery, statusFilter, typeFilter])
 
   const fetchPayments = async () => {
-    // Simulation - en production, appel API
     setLoading(true)
-    setTimeout(() => {
-      setPayments(demoPayments)
+    try {
+      const response = await fetch('/api/payments')
+      const result = await response.json()
+      
+      if (result.success) {
+        setPayments(result.data)
+        setFilteredPayments(result.data)
+      } else {
+        toast.error('Erreur lors du chargement des paiements')
+      }
+    } catch (error) {
+      console.error('Erreur:', error)
+      toast.error('Erreur lors du chargement des paiements')
+    } finally {
       setLoading(false)
-    }, 500)
+    }
   }
 
   const filterPayments = () => {
@@ -201,17 +131,16 @@ export default function PaymentsContent() {
     }
     
     if (typeFilter !== 'ALL') {
-      filtered = filtered.filter(p => p.type === typeFilter)
+      filtered = filtered.filter(p => p.paymentType === typeFilter)
     }
     
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
       filtered = filtered.filter(p => 
-        p.booking.user.firstName.toLowerCase().includes(query) ||
-        p.booking.user.lastName.toLowerCase().includes(query) ||
-        p.booking.user.email.toLowerCase().includes(query) ||
-        p.booking.room.name.toLowerCase().includes(query) ||
-        p.reference?.toLowerCase().includes(query)
+        p.user.firstName.toLowerCase().includes(query) ||
+        p.user.lastName.toLowerCase().includes(query) ||
+        p.user.email.toLowerCase().includes(query) ||
+        p.booking.room.name.toLowerCase().includes(query)
       )
     }
     
@@ -229,46 +158,49 @@ export default function PaymentsContent() {
       const diffDays = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
       
       if (diffDays === 5 && payment.status === 'PENDING') {
-        console.log(`Rappel: Paiement de ${payment.booking.user.firstName} dans 5 jours`)
+        console.log(`Rappel: Paiement de ${payment.user.firstName} dans 5 jours`)
         // En production : envoyer email de rappel
       }
       
       if (diffDays < 0 && payment.status === 'PENDING') {
         // Paiement en retard
         if (diffDays === -2 || diffDays % 2 === 0) {
-          console.log(`Relance: Paiement en retard de ${payment.booking.user.firstName}`)
+          console.log(`Relance: Paiement en retard de ${payment.user.firstName}`)
           // En production : envoyer email de relance
         }
       }
     })
   }
 
-  const validatePayment = async (paymentId: string, reference: string, notes: string) => {
+  const validatePayment = async (paymentId: string) => {
     try {
-      // Simuler la validation
-      const updatedPayments = payments.map(p => {
-        if (p.id === paymentId) {
-          return {
-            ...p,
-            status: 'VALIDATED' as const,
-            paidDate: new Date().toISOString(),
-            paymentMethod: 'Virement',
-            reference,
-            notes
-          }
-        }
-        return p
+      const response = await fetch('/api/payments', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          id: paymentId,
+          status: 'PAID'
+        })
       })
       
-      setPayments(updatedPayments)
-      toast.success('Paiement validé avec succès')
+      const result = await response.json()
       
-      // Envoyer la quittance par email
-      sendReceipt(paymentId)
-      
-      setShowValidationModal(false)
-      setSelectedPayment(null)
+      if (result.success) {
+        toast.success('Paiement validé avec succès')
+        await fetchPayments()
+        
+        // Envoyer la quittance par email
+        sendReceipt(paymentId)
+        
+        setShowValidationModal(false)
+        setSelectedPayment(null)
+      } else {
+        toast.error('Erreur lors de la validation')
+      }
     } catch (error) {
+      console.error('Erreur:', error)
       toast.error('Erreur lors de la validation')
     }
   }
@@ -276,13 +208,13 @@ export default function PaymentsContent() {
   const sendReceipt = (paymentId: string) => {
     const payment = payments.find(p => p.id === paymentId)
     if (payment) {
-      console.log(`Envoi de la quittance à ${payment.booking.user.email}`)
+      console.log(`Envoi de la quittance à ${payment.user.email}`)
       toast.success('Quittance envoyée par email')
     }
   }
 
   const sendReminder = (payment: Payment) => {
-    console.log(`Envoi d'un rappel à ${payment.booking.user.email}`)
+    console.log(`Envoi d'un rappel à ${payment.user.email}`)
     toast.success('Rappel envoyé')
   }
 
@@ -297,10 +229,10 @@ export default function PaymentsContent() {
   const stats = {
     total: payments.length,
     pending: payments.filter(p => p.status === 'PENDING').length,
-    validated: payments.filter(p => p.status === 'VALIDATED').length,
+    paid: payments.filter(p => p.status === 'PAID').length,
     late: payments.filter(p => p.status === 'LATE').length,
     totalAmount: payments.reduce((sum, p) => sum + p.amount, 0),
-    collectedAmount: payments.filter(p => p.status === 'VALIDATED').reduce((sum, p) => sum + p.amount, 0)
+    collectedAmount: payments.filter(p => p.status === 'PAID').reduce((sum, p) => sum + p.amount, 0)
   }
 
   return (
@@ -370,7 +302,7 @@ export default function PaymentsContent() {
               >
                 <option value="ALL">Tous les statuts</option>
                 <option value="PENDING">En attente</option>
-                <option value="VALIDATED">Validés</option>
+                <option value="PAID">Payés</option>
                 <option value="LATE">En retard</option>
                 <option value="CANCELLED">Annulés</option>
               </select>
@@ -401,8 +333,8 @@ export default function PaymentsContent() {
               <p className="text-sm font-bold text-yellow-700">{stats.pending}</p>
             </div>
             <div className="flex-shrink-0 px-3 py-2 bg-green-100 rounded-lg">
-              <p className="text-xs text-green-600">Validés</p>
-              <p className="text-sm font-bold text-green-700">{stats.validated}</p>
+              <p className="text-xs text-green-600">Payés</p>
+              <p className="text-sm font-bold text-green-700">{stats.paid}</p>
             </div>
             <div className="flex-shrink-0 px-3 py-2 bg-red-100 rounded-lg">
               <p className="text-xs text-red-600">En retard</p>
@@ -477,10 +409,10 @@ export default function PaymentsContent() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div>
                             <div className="text-sm font-medium text-gray-900">
-                              {payment.booking.user.firstName} {payment.booking.user.lastName}
+                              {payment.user.firstName} {payment.user.lastName}
                             </div>
                             <div className="text-sm text-gray-500">
-                              {payment.booking.user.email}
+                              {payment.user.email}
                             </div>
                           </div>
                         </td>
@@ -494,7 +426,7 @@ export default function PaymentsContent() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded">
-                            {typeLabels[payment.type]}
+                            {typeLabels[payment.paymentType]}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -542,8 +474,8 @@ export default function PaymentsContent() {
                                   <Mail className="w-4 h-4" />
                                 </button>
                               </>
-                            )}
-                            {payment.status === 'VALIDATED' && (
+                             )}
+                            {payment.status === 'PAID' && (
                               <button
                                 onClick={() => {
                                   setSelectedPayment(payment)
@@ -631,7 +563,7 @@ export default function PaymentsContent() {
                 <div className="bg-gray-50 rounded-lg p-4">
                   <p className="text-sm text-gray-600">Locataire</p>
                   <p className="font-medium">
-                    {selectedPayment.booking.user.firstName} {selectedPayment.booking.user.lastName}
+                    {selectedPayment.user.firstName} {selectedPayment.user.lastName}
                   </p>
                 </div>
                 
@@ -642,37 +574,9 @@ export default function PaymentsContent() {
                 
                 <form onSubmit={(e) => {
                   e.preventDefault()
-                  const formData = new FormData(e.currentTarget)
-                  const reference = formData.get('reference') as string
-                  const notes = formData.get('notes') as string
-                  validatePayment(selectedPayment.id, reference, notes)
+                  validatePayment(selectedPayment.id)
                 }}>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Référence du virement
-                      </label>
-                      <input
-                        name="reference"
-                        type="text"
-                        required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                        placeholder="VIR2024XXX"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Notes (optionnel)
-                      </label>
-                      <textarea
-                        name="notes"
-                        rows={3}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                        placeholder="Remarques..."
-                      />
-                    </div>
-                  </div>
+
                   
                   <div className="flex justify-end gap-3 mt-6">
                     <button
@@ -742,9 +646,9 @@ export default function PaymentsContent() {
                   <div>
                     <p className="text-sm text-gray-600">Locataire</p>
                     <p className="font-medium">
-                      {selectedPayment.booking.user.firstName} {selectedPayment.booking.user.lastName}
+                      {selectedPayment.user.firstName} {selectedPayment.user.lastName}
                     </p>
-                    <p className="text-sm">{selectedPayment.booking.user.email}</p>
+                    <p className="text-sm">{selectedPayment.user.email}</p>
                   </div>
                   
                   <div>
@@ -763,7 +667,7 @@ export default function PaymentsContent() {
                   
                   <div className="border-t pt-4">
                     <p className="text-sm text-gray-600">
-                      Je soussigné, Maison Oscar, reconnais avoir reçu de {selectedPayment.booking.user.firstName} {selectedPayment.booking.user.lastName}
+                      Je soussigné, Maison Oscar, reconnais avoir reçu de {selectedPayment.user.firstName} {selectedPayment.user.lastName}
                       la somme de <strong>{selectedPayment.amount}€</strong> au titre du loyer et des charges
                       pour la période indiquée ci-dessus.
                     </p>

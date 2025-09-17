@@ -38,6 +38,17 @@ interface ContentSections {
     description?: string
     features?: Array<{ title: string; description: string }>
     address?: string
+    images?: string[]
+  }
+  rooms: {
+    title?: string
+    description?: string
+    buttonText?: string
+  }
+  footer: {
+    description?: string
+    copyright?: string
+    quickLinks?: Array<{ label: string; href: string }>
   }
   commonSpaces?: any
 }
@@ -107,6 +118,8 @@ export default function CMSContent() {
     hero: {},
     problemSolution: {},
     house: {},
+    rooms: {},
+    footer: {},
     commonSpaces: {}
   })
   const [testimonials, setTestimonials] = useState<any[]>([])
@@ -148,11 +161,11 @@ export default function CMSContent() {
       }
       
       // Charger les mentions légales
-      const mentionsRes = await fetch('/api/cms/legal-pages?slug=mentions-legales')
+      const mentionsRes = await fetch('/api/cms/legal-pages?pageType=mentions-legales')
       if (mentionsRes.ok) {
         const mentionsData = await mentionsRes.json()
-        if (mentionsData.success && mentionsData.data?.length > 0) {
-          setMentionsLegales(mentionsData.data[0])
+        if (mentionsData.success && mentionsData.data) {
+          setMentionsLegales(mentionsData.data)
         }
       }
       
@@ -162,6 +175,15 @@ export default function CMSContent() {
         const sectionsData = await sectionsRes.json()
         if (sectionsData.success) {
           setContentSections(sectionsData.data)
+        }
+      }
+      
+      // Charger les témoignages
+      const testimonialsRes = await fetch('/api/cms/testimonials')
+      if (testimonialsRes.ok) {
+        const testimonialsData = await testimonialsRes.json()
+        if (testimonialsData.success) {
+          setTestimonials(testimonialsData.data)
         }
       }
       
@@ -242,15 +264,14 @@ export default function CMSContent() {
   const handleSaveMentions = async () => {
     setSaving(true)
     try {
-      const method = mentionsLegales.id ? 'PUT' : 'POST'
-      const url = mentionsLegales.id 
-        ? `/api/cms/legal-pages/${mentionsLegales.id}`
-        : '/api/cms/legal-pages'
-        
-      const response = await fetch(url, {
-        method,
+      const response = await fetch(`/api/cms/legal-pages?pageType=mentions-legales`, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(mentionsLegales)
+        body: JSON.stringify({
+          title: mentionsLegales.title,
+          content: mentionsLegales.content,
+          isActive: true
+        })
       })
       
       if (response.ok) {
@@ -266,6 +287,60 @@ export default function CMSContent() {
       toast.error('Erreur lors de la sauvegarde')
     } finally {
       setSaving(false)
+    }
+  }
+  
+  const handleSaveTestimonial = async () => {
+    setSaving(true)
+    try {
+      const method = editingTestimonial?.id ? 'PUT' : 'POST'
+      const url = editingTestimonial?.id 
+        ? `/api/cms/testimonials/${editingTestimonial.id}`
+        : '/api/cms/testimonials'
+        
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editingTestimonial)
+      })
+      
+      if (response.ok) {
+        toast.success(editingTestimonial?.id ? 'Témoignage modifié' : 'Témoignage ajouté')
+        setShowTestimonialModal(false)
+        setEditingTestimonial(null)
+        
+        // Recharger les témoignages
+        const testimonialsRes = await fetch('/api/cms/testimonials')
+        const testimonialsData = await testimonialsRes.json()
+        if (testimonialsData.success) {
+          setTestimonials(testimonialsData.data)
+        }
+      } else {
+        throw new Error('Erreur lors de la sauvegarde')
+      }
+    } catch (error) {
+      toast.error('Erreur lors de la sauvegarde')
+    } finally {
+      setSaving(false)
+    }
+  }
+  
+  const handleDeleteTestimonial = async (id: string) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce témoignage ?')) return
+    
+    try {
+      const response = await fetch(`/api/cms/testimonials/${id}`, {
+        method: 'DELETE'
+      })
+      
+      if (response.ok) {
+        toast.success('Témoignage supprimé')
+        setTestimonials(prev => prev.filter(t => t.id !== id))
+      } else {
+        throw new Error('Erreur lors de la suppression')
+      }
+    } catch (error) {
+      toast.error('Erreur lors de la suppression')
     }
   }
   
@@ -546,6 +621,39 @@ export default function CMSContent() {
                               placeholder="Nom"
                               className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
                             />
+                            <input
+                              type="email"
+                              value={owner.email || ''}
+                              onChange={(e) => {
+                                const newOwners = [...(legalConfig.owners || [])]
+                                newOwners[index] = { ...newOwners[index], email: e.target.value }
+                                setLegalConfig(prev => ({ ...prev, owners: newOwners }))
+                              }}
+                              placeholder="Email (optionnel)"
+                              className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                            />
+                            <input
+                              type="tel"
+                              value={owner.phone || ''}
+                              onChange={(e) => {
+                                const newOwners = [...(legalConfig.owners || [])]
+                                newOwners[index] = { ...newOwners[index], phone: e.target.value }
+                                setLegalConfig(prev => ({ ...prev, owners: newOwners }))
+                              }}
+                              placeholder="Téléphone (optionnel)"
+                              className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                            />
+                          </div>
+                          <div className="mt-2 flex justify-end">
+                            <button
+                              onClick={() => {
+                                const newOwners = legalConfig.owners?.filter((_, i) => i !== index) || []
+                                setLegalConfig(prev => ({ ...prev, owners: newOwners }))
+                              }}
+                              className="text-red-600 hover:text-red-700 text-sm"
+                            >
+                              Supprimer
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -909,6 +1017,139 @@ export default function CMSContent() {
                     placeholder="123 rue de la République, 35170 Bruz"
                   />
                 </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Images de la maison (URLs, une par ligne)
+                  </label>
+                  <textarea
+                    value={contentSections.house?.images?.join('\n') || ''}
+                    onChange={(e) => setContentSections((prev: ContentSections) => ({
+                      ...prev,
+                      house: { 
+                        ...prev.house, 
+                        images: e.target.value.split('\n').filter(url => url.trim())
+                      }
+                    }))}
+                    rows={4}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent font-mono text-sm"
+                    placeholder="/images/house-exterior.jpg&#10;/images/kitchen.jpg&#10;/images/living-room.jpg"
+                  />
+                </div>
+              </div>
+            </div>
+            
+            {/* Section Chambres */}
+            <div className="bg-white rounded-xl p-4 sm:p-6 border border-gray-200">
+              <h3 className="text-lg font-semibold mb-4">Section Chambres</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Titre de la section
+                  </label>
+                  <input
+                    type="text"
+                    value={contentSections.rooms?.title || ''}
+                    onChange={(e) => setContentSections((prev: ContentSections) => ({
+                      ...prev,
+                      rooms: { ...prev.rooms, title: e.target.value }
+                    }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                    placeholder="Nos chambres disponibles"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Description
+                  </label>
+                  <textarea
+                    value={contentSections.rooms?.description || ''}
+                    onChange={(e) => setContentSections((prev: ContentSections) => ({
+                      ...prev,
+                      rooms: { ...prev.rooms, description: e.target.value }
+                    }))}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                    placeholder="Découvrez nos chambres meublées et équipées, conçues pour votre confort et votre réussite académique."
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Texte du bouton
+                  </label>
+                  <input
+                    type="text"
+                    value={contentSections.rooms?.buttonText || ''}
+                    onChange={(e) => setContentSections((prev: ContentSections) => ({
+                      ...prev,
+                      rooms: { ...prev.rooms, buttonText: e.target.value }
+                    }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                    placeholder="Voir les détails"
+                  />
+                </div>
+              </div>
+            </div>
+            
+            {/* Section Footer */}
+            <div className="bg-white rounded-xl p-4 sm:p-6 border border-gray-200">
+              <h3 className="text-lg font-semibold mb-4">Footer</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Description du site
+                  </label>
+                  <textarea
+                    value={contentSections.footer?.description || ''}
+                    onChange={(e) => setContentSections((prev: ContentSections) => ({
+                      ...prev,
+                      footer: { ...prev.footer, description: e.target.value }
+                    }))}
+                    rows={2}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                    placeholder="La Maison Oscar propose des logements étudiants de qualité à Bruz..."
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Texte de copyright
+                  </label>
+                  <input
+                    type="text"
+                    value={contentSections.footer?.copyright || ''}
+                    onChange={(e) => setContentSections((prev: ContentSections) => ({
+                      ...prev,
+                      footer: { ...prev.footer, copyright: e.target.value }
+                    }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                    placeholder="© 2025 Maison Oscar. Tous droits réservés."
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Liens rapides (format: Label|URL, un par ligne)
+                  </label>
+                  <textarea
+                    value={contentSections.footer?.quickLinks?.map(l => `${l.label}|${l.href}`).join('\n') || ''}
+                    onChange={(e) => setContentSections((prev: ContentSections) => ({
+                      ...prev,
+                      footer: { 
+                        ...prev.footer, 
+                        quickLinks: e.target.value.split('\n').filter(l => l.trim()).map(line => {
+                          const [label, href] = line.split('|')
+                          return { label: label?.trim() || '', href: href?.trim() || '' }
+                        })
+                      }
+                    }))}
+                    rows={4}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent font-mono text-sm"
+                    placeholder="Mentions légales|/mentions-legales&#10;Contact|#contact&#10;Chambres|#chambres&#10;À propos|#about"
+                  />
+                </div>
               </div>
             </div>
             
@@ -1009,6 +1250,242 @@ export default function CMSContent() {
                 Sauvegarder
               </button>
             </div>
+          </div>
+        )
+        
+      case 'testimonials':
+        return (
+          <div className="space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold">Témoignages</h3>
+                <p className="text-sm text-gray-600">Gérez les témoignages affichés sur le site</p>
+              </div>
+              <button
+                onClick={() => {
+                  setEditingTestimonial({
+                    name: '',
+                    role: '',
+                    content: '',
+                    rating: 5,
+                    isActive: true
+                  })
+                  setShowTestimonialModal(true)
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Ajouter un témoignage
+              </button>
+            </div>
+
+            {/* Liste des témoignages */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {testimonials.map((testimonial) => (
+                <div
+                  key={testimonial.id}
+                  className="bg-white rounded-xl p-4 sm:p-6 border border-gray-200 hover:shadow-lg transition-shadow"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <h4 className="font-semibold text-gray-900">{testimonial.name}</h4>
+                      <p className="text-sm text-gray-500">{testimonial.role}</p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {[...Array(5)].map((_, i) => (
+                        <span
+                          key={i}
+                          className={`text-lg ${
+                            i < testimonial.rating ? 'text-yellow-400' : 'text-gray-300'
+                          }`}
+                        >
+                          ★
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <p className="text-sm text-gray-700 mb-4 line-clamp-3">
+                    {testimonial.content}
+                  </p>
+                  
+                  <div className="flex items-center justify-between">
+                    <span className={`inline-flex items-center px-2 py-1 text-xs rounded-full ${
+                      testimonial.isActive 
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-gray-100 text-gray-700'
+                    }`}>
+                      {testimonial.isActive ? 'Actif' : 'Inactif'}
+                    </span>
+                    
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          setEditingTestimonial(testimonial)
+                          setShowTestimonialModal(true)
+                        }}
+                        className="p-1 hover:bg-gray-100 rounded transition-colors"
+                      >
+                        <Edit2 className="w-4 h-4 text-gray-600" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteTestimonial(testimonial.id)}
+                        className="p-1 hover:bg-red-100 rounded transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4 text-red-600" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            {testimonials.length === 0 && (
+              <div className="bg-white rounded-xl p-12 border border-gray-200 text-center">
+                <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-500">Aucun témoignage pour le moment</p>
+                <p className="text-sm text-gray-400 mt-1">
+                  Ajoutez des témoignages pour les afficher sur votre site
+                </p>
+              </div>
+            )}
+            
+            {/* Modal d'édition */}
+            {showTestimonialModal && (
+              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="bg-white rounded-2xl max-w-lg w-full p-6"
+                >
+                  <h3 className="text-xl font-bold mb-4">
+                    {editingTestimonial?.id ? 'Modifier le témoignage' : 'Ajouter un témoignage'}
+                  </h3>
+                  
+                  <form onSubmit={(e) => {
+                    e.preventDefault()
+                    handleSaveTestimonial()
+                  }}>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Nom
+                        </label>
+                        <input
+                          type="text"
+                          value={editingTestimonial?.name || ''}
+                          onChange={(e) => setEditingTestimonial(prev => ({
+                            ...prev,
+                            name: e.target.value
+                          }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                          required
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Rôle / Formation
+                        </label>
+                        <input
+                          type="text"
+                          value={editingTestimonial?.role || ''}
+                          onChange={(e) => setEditingTestimonial(prev => ({
+                            ...prev,
+                            role: e.target.value
+                          }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                          placeholder="Étudiant en informatique"
+                          required
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Témoignage
+                        </label>
+                        <textarea
+                          value={editingTestimonial?.content || ''}
+                          onChange={(e) => setEditingTestimonial(prev => ({
+                            ...prev,
+                            content: e.target.value
+                          }))}
+                          rows={4}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                          required
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Note
+                        </label>
+                        <div className="flex items-center gap-2">
+                          {[1, 2, 3, 4, 5].map((rating) => (
+                            <button
+                              key={rating}
+                              type="button"
+                              onClick={() => setEditingTestimonial(prev => ({
+                                ...prev,
+                                rating
+                              }))}
+                              className={`text-2xl ${
+                                rating <= (editingTestimonial?.rating || 0)
+                                  ? 'text-yellow-400'
+                                  : 'text-gray-300'
+                              } hover:text-yellow-400 transition-colors`}
+                            >
+                              ★
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id="isActive"
+                          checked={editingTestimonial?.isActive ?? true}
+                          onChange={(e) => setEditingTestimonial(prev => ({
+                            ...prev,
+                            isActive: e.target.checked
+                          }))}
+                          className="mr-2"
+                        />
+                        <label htmlFor="isActive" className="text-sm text-gray-700">
+                          Témoignage actif (affiché sur le site)
+                        </label>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-end gap-3 mt-6">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowTestimonialModal(false)
+                          setEditingTestimonial(null)
+                        }}
+                        className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+                      >
+                        Annuler
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={saving}
+                        className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 disabled:opacity-50"
+                      >
+                        {saving ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          editingTestimonial?.id ? 'Mettre à jour' : 'Ajouter'
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                </motion.div>
+              </div>
+            )}
           </div>
         )
         

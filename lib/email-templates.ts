@@ -555,34 +555,77 @@ export const passwordResetTemplate = (data: {
   firstName: string
   resetLink: string
 }) => {
+  const siteName = process.env.SITE_NAME || 'Maison Oscar'
   const bodyContent = `
+    <div style="text-align: center; margin-bottom: 30px;">
+      <div style="display: inline-block; background: #ef4444; color: white; padding: 8px 20px; border-radius: 50px; font-size: 14px; font-weight: 600;">
+        ⏰ Action requise - Expire dans 1 heure
+      </div>
+    </div>
+    
     <h2 style="color: #111827; margin: 0 0 20px; font-size: 24px;">
-      Bonjour ${data.firstName},
+      Bonjour ${data.firstName} ! 👋
     </h2>
     
-    <p style="color: #4b5563; line-height: 1.6; margin: 0 0 20px;">
-      Vous avez demandé la réinitialisation de votre mot de passe. Cliquez sur le bouton ci-dessous pour créer un nouveau mot de passe sécurisé.
+    <p style="color: #4b5563; line-height: 1.6; margin: 0 0 30px;">
+      Vous avez demandé la réinitialisation de votre mot de passe pour votre compte ${siteName}. 
+      Cliquez sur le bouton ci-dessous pour créer un nouveau mot de passe sécurisé.
     </p>
     
-    ${emailComponents.primaryButton('Réinitialiser mon mot de passe', data.resetLink)}
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 30px auto;">
+      <tr>
+        <td class="button">
+          <a href="${data.resetLink}" style="display: inline-block; background: #000000; color: #F5F3F0; padding: 14px 32px; text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 16px;">
+            🔐 Créer mon nouveau mot de passe
+          </a>
+        </td>
+      </tr>
+    </table>
     
-    ${emailComponents.alertBox(
-      'Ce lien expirera dans 1 heure pour des raisons de sécurité.',
-      'info'
+    ${emailComponents.infoCard(
+      '⏱️ Durée de validité',
+      'Pour des raisons de sécurité, ce lien expirera dans <strong>1 heure</strong>. Passé ce délai, vous devrez faire une nouvelle demande.',
+      '#fef3c7'
     )}
+    
+    <div style="margin-top: 30px; padding: 20px; background: #f9fafb; border-radius: 12px;">
+      <h3 style="color: #111827; margin: 0 0 12px; font-size: 16px; font-weight: 600;">
+        🔒 Conseils de sécurité
+      </h3>
+      <ul style="color: #4b5563; margin: 0; padding-left: 20px; line-height: 1.6;">
+        <li>Utilisez au moins 8 caractères</li>
+        <li>Mélangez majuscules, minuscules et chiffres</li>
+        <li>Évitez les informations personnelles</li>
+        <li>Ne partagez jamais votre mot de passe</li>
+      </ul>
+    </div>
     
     ${emailComponents.divider()}
     
-    <p style="color: #9ca3af; font-size: 14px; line-height: 1.6; margin: 0;">
-      Si vous n'avez pas demandé cette réinitialisation, vous pouvez ignorer cet email en toute sécurité. Votre mot de passe restera inchangé.
-    </p>
+    <div style="text-align: center; margin-top: 30px;">
+      <p style="color: #6b7280; font-size: 14px; margin: 0 0 10px;">
+        Vous n'avez pas demandé cette réinitialisation ?
+      </p>
+      <p style="color: #9ca3af; font-size: 13px; margin: 0;">
+        Ignorez simplement cet email. Votre mot de passe restera inchangé et personne<br>
+        ne pourra accéder à votre compte.
+      </p>
+    </div>
+    
+    <div style="margin-top: 30px; padding: 15px; background: #fee2e2; border-radius: 12px; border: 1px solid #fecaca;">
+      <p style="color: #991b1b; font-size: 13px; margin: 0;">
+        <strong>⚠️ Important :</strong> Si vous recevez régulièrement ces emails sans les avoir demandés, 
+        contactez-nous immédiatement à contact@maisonoscar.fr
+      </p>
+    </div>
   `
   
   return baseEmailTemplate({
-    preheader: 'Réinitialisez votre mot de passe Maison Oscar',
+    preheader: 'Réinitialisez votre mot de passe - Expire dans 1 heure',
+    headerBgColor: 'linear-gradient(135deg, #000000 0%, #1f2937 100%)',
     headerIcon: '🔐',
-    headerTitle: 'Réinitialisation du mot de passe',
-    headerSubtitle: 'Créez un nouveau mot de passe sécurisé',
+    headerTitle: 'Réinitialisation de mot de passe',
+    headerSubtitle: siteName,
     bodyContent
   })
 }

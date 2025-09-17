@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Créer le lien de réinitialisation
-    const resetLink = `${process.env.NEXTAUTH_URL}/admin/reset-password?token=${resetToken}`
+    const resetLink = `${process.env.NEXTAUTH_URL}/auth/reset-password?token=${resetToken}`
 
     // Envoyer l'email avec le template moderne
     const emailHtml = passwordResetTemplate({
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
 
     await sendEmail(
       email,
-      '🔐 Réinitialisation de votre mot de passe Maison Oscar',
+      'Réinitialisation de votre mot de passe',
       emailHtml
     )
 
