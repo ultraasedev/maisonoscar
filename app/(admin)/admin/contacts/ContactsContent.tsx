@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { 
+import {
   MessageSquare, Mail, Phone, User, Calendar,
   Inbox, Send, Archive, Trash2, Star, Search,
-  Filter, CheckCircle, Clock, AlertCircle
+  Filter, CheckCircle, Clock, AlertCircle, X
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -372,46 +372,70 @@ export default function ContactsContent() {
 
       {/* Response Modal */}
       {selectedContact && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <Card className="w-full max-w-2xl">
-            <CardHeader>
-              <CardTitle>Répondre à {selectedContact.firstName} {selectedContact.lastName}</CardTitle>
-            </CardHeader>
-            <CardContent>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-gray-200 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">
+                  Répondre à {selectedContact.firstName} {selectedContact.lastName}
+                </h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  {selectedContact.email} • {new Date(selectedContact.createdAt).toLocaleDateString('fr-FR')}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setSelectedContact(null)
+                  setResponseText('')
+                }}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6">
               <div className="space-y-4">
                 <div>
-                  <p className="text-sm text-gray-600">Message original:</p>
-                  <p className="mt-1 p-3 bg-gray-50 rounded">{selectedContact.message}</p>
+                  <p className="text-sm font-medium text-gray-700 mb-2">Message original :</p>
+                  <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <p className="text-gray-800">{selectedContact.message}</p>
+                    <div className="mt-2 text-xs text-gray-500">
+                      Sujet : {selectedContact.subject}
+                    </div>
+                  </div>
                 </div>
-                
+
                 <div>
-                  <label className="block text-sm font-medium mb-2">Votre réponse</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Votre réponse</label>
                   <textarea
                     value={responseText}
                     onChange={(e) => setResponseText(e.target.value)}
                     rows={6}
-                    className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                    className="w-full p-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent resize-none"
                     placeholder="Tapez votre réponse..."
                   />
                 </div>
-                
-                <div className="flex justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setSelectedContact(null)
-                      setResponseText('')
-                    }}
-                  >
-                    Annuler
-                  </Button>
-                  <Button onClick={handleSendResponse}>
-                    Envoyer la réponse
-                  </Button>
-                </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50">
+              <button
+                onClick={() => {
+                  setSelectedContact(null)
+                  setResponseText('')
+                }}
+                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleSendResponse}
+                className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+              >
+                Envoyer la réponse
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

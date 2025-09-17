@@ -8,7 +8,7 @@ const OwnerSchema = z.object({
   lastName: z.string().min(1, "Nom requis"),
   address: z.string().optional(),
   phone: z.string().optional(),
-  email: z.string().email().optional()
+  email: z.string().email().optional().or(z.literal(''))
 })
 
 // Schema de validation pour la configuration juridique

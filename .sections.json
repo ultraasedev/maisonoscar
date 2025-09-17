@@ -1,0 +1,148 @@
+{
+  "about": {
+    "badge": "Maison Oscar",
+    "title": "Créateur de liens,",
+    "titleAccent": "par nature",
+    "description": "Nous révolutionnons la façon de vivre ensemble en créant des espaces modernes où se mélangent intimité personnelle et convivialité partagée.",
+    "features": [
+      {
+        "title": "Un nouveau mode de vie",
+        "description": "Alliant intimité de votre chambre privée et richesse des espaces partagés pour créer des liens authentiques."
+      },
+      {
+        "title": "Une communauté bienveillante",
+        "description": "Sélection soigneuse des colocataires pour garantir une harmonie et des valeurs partagées."
+      },
+      {
+        "title": "L'humain au centre",
+        "description": "Car derrière chaque porte se cache une personnalité unique qui enrichit notre communauté."
+      },
+      {
+        "title": "Tout inclus, tout simplifié",
+        "description": "Charges, internet, ménage... concentrez-vous sur l'essentiel : vivre et créer des liens."
+      }
+    ],
+    "cta": "Découvrir notre maison"
+  },
+  "hero": {
+    "title": "Votre nouvelle Zonme",
+    "subtitle": "en colocation à Bruz",
+    "description": "Découvrez une nouvelle façon de vivre en communauté dans notre maison de charme, où chaque espace a été pensé pour favoriser le partage et le bien-être.",
+    "cta1": "Découvrir nos chambres",
+    "cta2": "Réserver une visite"
+  },
+  "problemSolution": {
+    "title": "Le co-living réinventé",
+    "subtitle": "pour créer des liens",
+    "problems": [
+      {
+        "title": "Solitude en location",
+        "description": "Vivre seul peut être isolant et coûteux"
+      },
+      {
+        "title": "Espaces impersonnels",
+        "description": "Les logements classiques manquent d'âme"
+      },
+      {
+        "title": "Charges élevées",
+        "description": "Les frais s'accumulent rapidement"
+      }
+    ],
+    "solutions": [
+      {
+        "title": "Communauté bienveillante",
+        "description": "Partagez des moments authentiques"
+      },
+      {
+        "title": "Maison de caractère",
+        "description": "Un lieu chaleureux et accueillant"
+      },
+      {
+        "title": "Tout inclus",
+        "description": "Une formule simple et transparente"
+      }
+    ]
+  },
+  "house": {
+    "title": "Notre maison",
+    "subtitle": "votre nouveau chez-vous",
+    "description": "Une maison de caractère avec jardin, située à Bruz, à seulement 15 minutes de Rennes.",
+    "features": [
+      {
+        "icon": "home",
+        "value": "180m²",
+        "label": "Surface habitable"
+      },
+      {
+        "icon": "users",
+        "value": "9",
+        "label": "Chambres"
+      },
+      {
+        "icon": "tree",
+        "value": "500m²",
+        "label": "Jardin"
+      },
+      {
+        "icon": "car",
+        "value": "15min",
+        "label": "De Rennes"
+      }
+    ],
+    "amenities": [
+      "Cuisine équipée moderne",
+      "Grand salon lumineux",
+      "Jardin aménagé",
+      "Parking sécurisé",
+      "Buanderie",
+      "Espace coworking",
+      "Salle de sport",
+      "Local vélos"
+    ]
+  },
+  "rooms": {
+    "title": "Nos chambres",
+    "titleAccent": "uniques",
+    "description": "Chaque chambre a été pensée pour créer votre cocon personnel tout en favorisant les rencontres dans nos espaces communs.",
+    "cta": "Découvrir les chambres"
+  },
+  "footer": {
+    "companyName": "MAISON OSCAR",
+    "description": "Créateur de liens en Bretagne. Le co-living nouvelle génération avec une communauté bienveillante.",
+    "copyright": "© 2024 Maison Oscar. Tous droits réservés. Créateur de liens en Bretagne.",
+    "navigationLinks": [
+      { "label": "Accueil", "href": "#accueil" },
+      { "label": "Le co-living", "href": "#coliving" },
+      { "label": "Notre maison", "href": "#maison" },
+      { "label": "Chambres", "href": "#chambres" },
+      { "label": "Mentions légales", "href": "/mentions-legales" }
+    ],
+    "services": [
+      "Chambres meublées",
+      "Espaces partagés",
+      "Communauté active",
+      "Support 7j/7"
+    ]
+  },
+  "commonSpaces": {
+    "title": "Espaces communs inclus",
+    "items": [
+      {
+        "title": "Cuisine moderne",
+        "description": "Équipée et spacieuse"
+      },
+      {
+        "title": "Salon connecté",
+        "description": "Fibre et Netflix inclus"
+      },
+      {
+        "title": "Parking sécurisé",
+        "description": "Places garanties"
+      },
+      {
+        "title": "Ménage inclus",
+        "description": "Parties communes"
+      }
+    ]
+  }
+}

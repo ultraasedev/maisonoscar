@@ -161,13 +161,11 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json()
     
     // Mettre à jour le message
-    const message = await prisma.contactMessage.update({
+    const message = await prisma.contact.update({
       where: { id },
       data: {
-        isRead: body.isRead,
-        readAt: body.isRead ? new Date() : undefined,
         status: body.status,
-        response: body.response,
+        adminResponse: body.response,
         respondedAt: body.response ? new Date() : undefined,
         respondedBy: body.respondedBy
       }
@@ -206,7 +204,7 @@ export async function DELETE(request: NextRequest) {
       )
     }
     
-    await prisma.contactMessage.delete({
+    await prisma.contact.delete({
       where: { id }
     })
     

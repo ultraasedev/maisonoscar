@@ -2,14 +2,17 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { 
-  Settings, FileText, Users, Building2, Globe, 
+import {
+  Settings, FileText, Users, Building2, Globe,
   Save, RefreshCw, Plus, Edit2, Trash2, Eye,
   Facebook, Instagram, Linkedin, Twitter, Mail,
   Phone, MapPin, Clock, ChevronRight, AlertCircle,
-  Loader2, Check, X, Upload, Image as ImageIcon
+  Loader2, Check, X, Upload, Image as ImageIcon,
+  Home, Car, TreePine, Bed, Bath, Wifi, Camera,
+  Shield, Zap, Utensils, Sofa, Tv, Gamepad2
 } from 'lucide-react'
 import { toast } from 'sonner'
+import ImageUpload from '@/components/ui/ImageUpload'
 
 interface TabItem {
   id: string
@@ -24,21 +27,27 @@ interface ContentSections {
     buttonText?: string
     secondaryButtonText?: string
   }
+  about: {
+    badge?: string
+    title?: string
+    titleAccent?: string
+    description?: string
+    features?: Array<{ title: string; description: string }>
+    cta?: string
+  }
   problemSolution: {
     title?: string
-    problemTitle?: string
-    problemDescription?: string
-    problemPoints?: string[]
-    solutionTitle?: string
-    solutionDescription?: string
-    solutionPoints?: string[]
+    subtitle?: string
+    problems?: Array<{ title: string; description: string }>
+    solutions?: Array<{ title: string; description: string }>
   }
   house: {
     title?: string
+    subtitle?: string
     description?: string
-    features?: Array<{ title: string; description: string }>
-    address?: string
-    images?: string[]
+    features?: Array<{ icon: string; value: string; label: string }>
+    amenities?: string[]
+    images?: (string | { url: string; title?: string; description?: string })[]
   }
   rooms: {
     title?: string
@@ -51,6 +60,77 @@ interface ContentSections {
     quickLinks?: Array<{ label: string; href: string }>
   }
   commonSpaces?: any
+}
+
+interface Testimonial {
+  id?: string
+  name: string
+  role: string
+  content: string
+  rating: number
+  isActive: boolean
+}
+
+// Map des icônes disponibles pour les caractéristiques de maison
+const houseIconMap = {
+  home: Home,
+  users: Users,
+  car: Car,
+  tree: TreePine,
+  bed: Bed,
+  bath: Bath,
+  wifi: Wifi,
+  camera: Camera,
+  shield: Shield,
+  zap: Zap,
+  utensils: Utensils,
+  sofa: Sofa,
+  tv: Tv,
+  gamepad: Gamepad2,
+  building: Building2,
+  mapPin: MapPin
+}
+
+// Composant sélecteur d'icône
+const IconSelector = ({ selectedIcon, onIconSelect }: { selectedIcon: string, onIconSelect: (icon: string) => void }) => {
+  const [isOpen, setIsOpen] = useState(false)
+
+  const SelectedIconComponent = houseIconMap[selectedIcon as keyof typeof houseIconMap] || Home
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors"
+      >
+        <SelectedIconComponent className="w-4 h-4" />
+        <span className="text-sm">{selectedIcon}</span>
+        <ChevronRight className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10 p-3 grid grid-cols-4 gap-2 min-w-[200px]">
+          {Object.entries(houseIconMap).map(([key, IconComponent]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => {
+                onIconSelect(key)
+                setIsOpen(false)
+              }}
+              className={`p-2 rounded hover:bg-gray-100 flex flex-col items-center gap-1 text-xs ${
+                selectedIcon === key ? 'bg-black text-white' : ''
+              }`}
+            >
+              <IconComponent className="w-4 h-4" />
+              <span>{key}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 const tabs: TabItem[] = [
@@ -116,6 +196,7 @@ export default function CMSContent() {
   
   const [contentSections, setContentSections] = useState<ContentSections>({
     hero: {},
+    about: {},
     problemSolution: {},
     house: {},
     rooms: {},
@@ -124,10 +205,119 @@ export default function CMSContent() {
   })
   const [testimonials, setTestimonials] = useState<any[]>([])
   const [editingContent, setEditingContent] = useState<any>(null)
-  const [editingTestimonial, setEditingTestimonial] = useState<any>(null)
+  const [editingTestimonial, setEditingTestimonial] = useState<Testimonial | null>(null)
   const [showContentModal, setShowContentModal] = useState(false)
   const [showTestimonialModal, setShowTestimonialModal] = useState(false)
   
+  // Générer le contenu par défaut des mentions légales
+  const getDefaultMentionsContent = (settings: any) => {
+    const contacts = {
+      email: settings?.contactEmail || 'contact@maisonoscar.fr',
+      phone: settings?.contactPhone || '06 XX XX XX XX',
+      address: settings?.contactAddress || 'Bruz, France'
+    }
+
+    return `<h2>1. Informations légales</h2>
+<p>
+  <strong>Dénomination sociale :</strong> Maison Oscar<br />
+  <strong>Forme juridique :</strong> SAS<br />
+  <strong>Siège social :</strong> ${contacts.address}<br />
+  <strong>SIRET :</strong> En cours d'immatriculation<br />
+  <strong>RCS :</strong> Rennes<br />
+</p>
+
+<h2>2. Contact</h2>
+<p>
+  <strong>Téléphone :</strong> ${contacts.phone}<br />
+  <strong>Email :</strong> ${contacts.email}<br />
+  <strong>Adresse :</strong> ${contacts.address}
+</p>
+
+<h2>3. Directeur de publication</h2>
+<p>
+  <strong>Responsable :</strong> Direction Maison Oscar<br />
+  <strong>Contact :</strong> ${contacts.email}
+</p>
+
+<h2>4. Hébergement du site</h2>
+<p>
+  <strong>Hébergeur :</strong> Vercel Inc.<br />
+  <strong>Adresse :</strong> 340 S Lemon Ave #4133, Walnut, CA 91789, USA<br />
+  <strong>Site web :</strong> https://vercel.com
+</p>
+
+<h2>5. Propriété intellectuelle</h2>
+<p>
+  L'ensemble de ce site relève de la législation française et internationale sur le droit d'auteur et la propriété intellectuelle.
+  Tous les droits de reproduction sont réservés, y compris pour les documents téléchargeables et les représentations iconographiques et photographiques.
+</p>
+<p>
+  La reproduction de tout ou partie de ce site sur un support électronique quel qu'il soit est formellement interdite sauf autorisation expresse du directeur de la publication.
+</p>
+
+<h2>6. Protection des données personnelles (RGPD)</h2>
+<p>
+  Conformément au Règlement Général sur la Protection des Données (RGPD - Règlement UE 2016/679) et à la loi Informatique et Libertés du 6 janvier 1978 modifiée,
+  vous disposez des droits suivants sur vos données personnelles :
+</p>
+<ul>
+  <li>Droit d'accès aux données</li>
+  <li>Droit de rectification</li>
+  <li>Droit à l'effacement (droit à l'oubli)</li>
+  <li>Droit à la limitation du traitement</li>
+  <li>Droit à la portabilité des données</li>
+  <li>Droit d'opposition</li>
+</ul>
+<p>
+  Pour exercer ces droits, vous pouvez nous contacter :
+  <br />Par email : ${contacts.email}
+  <br />Par courrier : Maison Oscar - ${contacts.address}
+</p>
+
+<h2>7. Cookies</h2>
+<p>
+  Ce site utilise des cookies pour améliorer votre expérience de navigation. Les cookies sont de petits fichiers texte stockés sur votre appareil.
+</p>
+<p>
+  <strong>Types de cookies utilisés :</strong>
+</p>
+<ul>
+  <li><strong>Cookies essentiels :</strong> Nécessaires au fonctionnement du site</li>
+  <li><strong>Cookies analytiques :</strong> Pour comprendre comment les visiteurs utilisent le site (Google Analytics)</li>
+  <li><strong>Cookies de session :</strong> Pour maintenir votre connexion</li>
+</ul>
+<p>
+  Vous pouvez paramétrer votre navigateur pour refuser les cookies ou être alerté lorsqu'un cookie est envoyé.
+</p>
+
+<h2>8. Responsabilité</h2>
+<p>
+  Maison Oscar s'efforce d'assurer l'exactitude et la mise à jour des informations diffusées sur ce site.
+  Cependant, Maison Oscar ne peut garantir l'exactitude, la précision ou l'exhaustivité des informations mises à disposition sur ce site.
+</p>
+<p>
+  En conséquence, Maison Oscar décline toute responsabilité pour toute imprécision, inexactitude ou omission portant sur des informations disponibles sur le site.
+</p>
+
+<h2>9. Liens hypertextes</h2>
+<p>
+  Les liens hypertextes mis en place dans le cadre du présent site internet en direction d'autres ressources présentes sur le réseau Internet
+  ne sauraient engager la responsabilité de Maison Oscar.
+</p>
+
+<h2>10. Droit applicable et juridiction compétente</h2>
+<p>
+  Les présentes mentions légales sont régies par le droit français.
+  En cas de litige et à défaut d'accord amiable, le litige sera porté devant les tribunaux français conformément aux règles de compétence en vigueur.
+</p>
+
+<div class="mt-8 p-4 bg-gray-50 rounded-lg">
+  <p class="text-sm text-gray-600">
+    <em>Dernière mise à jour : ${new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</em>
+  </p>
+</div>`
+  }
+
   // Charger les données au montage
   useEffect(() => {
     loadAllData()
@@ -136,11 +326,13 @@ export default function CMSContent() {
   const loadAllData = async () => {
     setLoading(true)
     try {
-      // Charger les paramètres du site
+      // Charger les paramètres du site d'abord
+      let loadedSettings = null
       const settingsRes = await fetch('/api/cms/settings')
       if (settingsRes.ok) {
         const settingsData = await settingsRes.json()
         if (settingsData.success) {
+          loadedSettings = settingsData.data
           setSiteSettings(settingsData.data)
           setSocialLinks({
             facebookUrl: settingsData.data.facebookUrl || '',
@@ -150,7 +342,7 @@ export default function CMSContent() {
           })
         }
       }
-      
+
       // Charger la configuration juridique
       const legalRes = await fetch('/api/cms/legal-config')
       if (legalRes.ok) {
@@ -159,13 +351,19 @@ export default function CMSContent() {
           setLegalConfig(legalData.data)
         }
       }
-      
-      // Charger les mentions légales
+
+      // Charger les mentions légales après avoir chargé les settings
       const mentionsRes = await fetch('/api/cms/legal-pages?pageType=mentions-legales')
       if (mentionsRes.ok) {
         const mentionsData = await mentionsRes.json()
         if (mentionsData.success && mentionsData.data) {
           setMentionsLegales(mentionsData.data)
+        } else {
+          // Si pas de données, utiliser le contenu par défaut du site public avec les settings chargés
+          setMentionsLegales(prev => ({
+            ...prev,
+            content: getDefaultMentionsContent(loadedSettings)
+          }))
         }
       }
       
@@ -819,14 +1017,124 @@ export default function CMSContent() {
                 </div>
               </div>
             </div>
-            
+
+            {/* Section À propos */}
+            <div className="bg-white rounded-xl p-4 sm:p-6 border border-gray-200">
+              <h3 className="text-lg font-semibold mb-4">Section À propos</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Badge
+                  </label>
+                  <input
+                    type="text"
+                    value={contentSections.about?.badge || ''}
+                    onChange={(e) => setContentSections((prev: ContentSections) => ({
+                      ...prev,
+                      about: { ...prev.about, badge: e.target.value }
+                    }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                    placeholder="Maison Oscar"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Titre principal
+                  </label>
+                  <input
+                    type="text"
+                    value={contentSections.about?.title || ''}
+                    onChange={(e) => setContentSections((prev: ContentSections) => ({
+                      ...prev,
+                      about: { ...prev.about, title: e.target.value }
+                    }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                    placeholder="Créateur de liens,"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Titre accentué
+                  </label>
+                  <input
+                    type="text"
+                    value={contentSections.about?.titleAccent || ''}
+                    onChange={(e) => setContentSections((prev: ContentSections) => ({
+                      ...prev,
+                      about: { ...prev.about, titleAccent: e.target.value }
+                    }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                    placeholder="par nature"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Description
+                  </label>
+                  <textarea
+                    value={contentSections.about?.description || ''}
+                    onChange={(e) => setContentSections((prev: ContentSections) => ({
+                      ...prev,
+                      about: { ...prev.about, description: e.target.value }
+                    }))}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                    placeholder="Nous révolutionnons la façon de vivre ensemble..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Caractéristiques (format: Titre|Description, une par ligne)
+                  </label>
+                  <textarea
+                    value={contentSections.about?.features?.map(f => `${f.title}|${f.description}`).join('\n') || ''}
+                    onChange={(e) => {
+                      const features = e.target.value.split('\n')
+                        .filter(line => line.trim())
+                        .map(line => {
+                          const [title, description] = line.split('|')
+                          return { title: title?.trim() || '', description: description?.trim() || '' }
+                        })
+                      setContentSections((prev: ContentSections) => ({
+                        ...prev,
+                        about: { ...prev.about, features }
+                      }))
+                    }}
+                    rows={6}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                    placeholder="Un nouveau mode de vie|Alliant intimité de votre chambre privée et richesse des espaces partagés&#10;Une communauté bienveillante|Sélection soigneuse des colocataires"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Texte du bouton d'action
+                  </label>
+                  <input
+                    type="text"
+                    value={contentSections.about?.cta || ''}
+                    onChange={(e) => setContentSections((prev: ContentSections) => ({
+                      ...prev,
+                      about: { ...prev.about, cta: e.target.value }
+                    }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                    placeholder="Découvrir notre maison"
+                  />
+                </div>
+              </div>
+            </div>
+
             {/* Section Problème/Solution */}
             <div className="bg-white rounded-xl p-4 sm:p-6 border border-gray-200">
               <h3 className="text-lg font-semibold mb-4">Section Problème/Solution</h3>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Titre de la section
+                    Titre principal
                   </label>
                   <input
                     type="text"
@@ -836,109 +1144,71 @@ export default function CMSContent() {
                       problemSolution: { ...prev.problemSolution, title: e.target.value }
                     }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                    placeholder="La colocation réinventée"
+                    placeholder="Le co-living réinventé"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Titre du problème
+                    Sous-titre
                   </label>
                   <input
                     type="text"
-                    value={contentSections.problemSolution?.problemTitle || ''}
+                    value={contentSections.problemSolution?.subtitle || ''}
                     onChange={(e) => setContentSections((prev: ContentSections) => ({
                       ...prev,
-                      problemSolution: { ...prev.problemSolution, problemTitle: e.target.value }
+                      problemSolution: { ...prev.problemSolution, subtitle: e.target.value }
                     }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                    placeholder="Logement étudiant : le parcours du combattant"
+                    placeholder="pour créer des liens"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Description du problème
+                    Problèmes (format: Titre|Description, un par ligne)
                   </label>
                   <textarea
-                    value={contentSections.problemSolution?.problemDescription || ''}
-                    onChange={(e) => setContentSections((prev: ContentSections) => ({
-                      ...prev,
-                      problemSolution: { ...prev.problemSolution, problemDescription: e.target.value }
-                    }))}
-                    rows={3}
+                    value={contentSections.problemSolution?.problems?.map(p => `${p.title}|${p.description}`).join('\n') || ''}
+                    onChange={(e) => {
+                      const problems = e.target.value.split('\n')
+                        .filter(line => line.trim())
+                        .map(line => {
+                          const [title, description] = line.split('|')
+                          return { title: title?.trim() || '', description: description?.trim() || '' }
+                        })
+                      setContentSections((prev: ContentSections) => ({
+                        ...prev,
+                        problemSolution: { ...prev.problemSolution, problems }
+                      }))
+                    }}
+                    rows={6}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                    placeholder="Trouver un logement étudiant est souvent compliqué..."
+                    placeholder="Solitude en location|Vivre seul peut être isolant et coûteux&#10;Espaces impersonnels|Les logements classiques manquent d'âme&#10;Charges élevées|Les frais s'accumulent rapidement"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Points du problème (un par ligne)
+                    Solutions (format: Titre|Description, une par ligne)
                   </label>
                   <textarea
-                    value={contentSections.problemSolution?.problemPoints?.join('\n') || ''}
-                    onChange={(e) => setContentSections((prev: ContentSections) => ({
-                      ...prev,
-                      problemSolution: { 
-                        ...prev.problemSolution, 
-                        problemPoints: e.target.value.split('\n').filter(p => p.trim())
-                      }
-                    }))}
-                    rows={4}
+                    value={contentSections.problemSolution?.solutions?.map(s => `${s.title}|${s.description}`).join('\n') || ''}
+                    onChange={(e) => {
+                      const solutions = e.target.value.split('\n')
+                        .filter(line => line.trim())
+                        .map(line => {
+                          const [title, description] = line.split('|')
+                          return { title: title?.trim() || '', description: description?.trim() || '' }
+                        })
+                      setContentSections((prev: ContentSections) => ({
+                        ...prev,
+                        problemSolution: { ...prev.problemSolution, solutions }
+                      }))
+                    }}
+                    rows={6}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                    placeholder="Prix élevés&#10;Logements vétustes&#10;Propriétaires peu disponibles&#10;Démarches complexes"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Titre de la solution
-                  </label>
-                  <input
-                    type="text"
-                    value={contentSections.problemSolution?.solutionTitle || ''}
-                    onChange={(e) => setContentSections((prev: ContentSections) => ({
-                      ...prev,
-                      problemSolution: { ...prev.problemSolution, solutionTitle: e.target.value }
-                    }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                    placeholder="La Maison Oscar : votre nouveau chez-vous"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Description de la solution
-                  </label>
-                  <textarea
-                    value={contentSections.problemSolution?.solutionDescription || ''}
-                    onChange={(e) => setContentSections((prev: ContentSections) => ({
-                      ...prev,
-                      problemSolution: { ...prev.problemSolution, solutionDescription: e.target.value }
-                    }))}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                    placeholder="Une maison pensée pour les étudiants..."
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Points de la solution (un par ligne)
-                  </label>
-                  <textarea
-                    value={contentSections.problemSolution?.solutionPoints?.join('\n') || ''}
-                    onChange={(e) => setContentSections((prev: ContentSections) => ({
-                      ...prev,
-                      problemSolution: { 
-                        ...prev.problemSolution, 
-                        solutionPoints: e.target.value.split('\n').filter(p => p.trim())
-                      }
-                    }))}
-                    rows={4}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                    placeholder="Chambres tout équipées&#10;Prix tout inclus transparent&#10;Propriétaire disponible et réactif&#10;Communauté bienveillante"
+                    placeholder="Communauté bienveillante|Partagez des moments authentiques&#10;Maison de caractère|Un lieu chaleureux et accueillant&#10;Tout inclus|Une formule simple et transparente"
                   />
                 </div>
               </div>
@@ -950,7 +1220,7 @@ export default function CMSContent() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Titre de la section
+                    Titre principal
                   </label>
                   <input
                     type="text"
@@ -960,10 +1230,26 @@ export default function CMSContent() {
                       house: { ...prev.house, title: e.target.value }
                     }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                    placeholder="Une maison d'exception"
+                    placeholder="Notre maison"
                   />
                 </div>
-                
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Sous-titre
+                  </label>
+                  <input
+                    type="text"
+                    value={contentSections.house?.subtitle || ''}
+                    onChange={(e) => setContentSections((prev: ContentSections) => ({
+                      ...prev,
+                      house: { ...prev.house, subtitle: e.target.value }
+                    }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                    placeholder="votre nouveau chez-vous"
+                  />
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Description
@@ -976,66 +1262,122 @@ export default function CMSContent() {
                     }))}
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                    placeholder="Maison moderne de 400m² sur 3 étages..."
+                    placeholder="Une maison de caractère avec jardin, située à Bruz, à seulement 15 minutes de Rennes."
                   />
                 </div>
-                
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Caractéristiques de la maison
+                  </label>
+
+                  {/* Liste des caractéristiques existantes */}
+                  <div className="space-y-3 mb-4">
+                    {(contentSections.house?.features || []).map((feature: any, index: number) => (
+                      <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                        <IconSelector
+                          selectedIcon={feature.icon || 'home'}
+                          onIconSelect={(icon) => {
+                            const newFeatures = [...(contentSections.house?.features || [])]
+                            newFeatures[index] = { ...newFeatures[index], icon }
+                            setContentSections((prev: ContentSections) => ({
+                              ...prev,
+                              house: { ...prev.house, features: newFeatures }
+                            }))
+                          }}
+                        />
+                        <input
+                          type="text"
+                          placeholder="Valeur (ex: 180m²)"
+                          value={feature.value || ''}
+                          onChange={(e) => {
+                            const newFeatures = [...(contentSections.house?.features || [])]
+                            newFeatures[index] = { ...newFeatures[index], value: e.target.value }
+                            setContentSections((prev: ContentSections) => ({
+                              ...prev,
+                              house: { ...prev.house, features: newFeatures }
+                            }))
+                          }}
+                          className="w-32 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Label (ex: Surface habitable)"
+                          value={feature.label || ''}
+                          onChange={(e) => {
+                            const newFeatures = [...(contentSections.house?.features || [])]
+                            newFeatures[index] = { ...newFeatures[index], label: e.target.value }
+                            setContentSections((prev: ContentSections) => ({
+                              ...prev,
+                              house: { ...prev.house, features: newFeatures }
+                            }))
+                          }}
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newFeatures = (contentSections.house?.features || []).filter((_, i) => i !== index)
+                            setContentSections((prev: ContentSections) => ({
+                              ...prev,
+                              house: { ...prev.house, features: newFeatures }
+                            }))
+                          }}
+                          className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Bouton pour ajouter une nouvelle caractéristique */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newFeatures = [...(contentSections.house?.features || []), { icon: 'home', value: '', label: '' }]
+                      setContentSections((prev: ContentSections) => ({
+                        ...prev,
+                        house: { ...prev.house, features: newFeatures }
+                      }))
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors text-sm"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Ajouter une caractéristique
+                  </button>
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Caractéristiques (format: Titre|Description, une par ligne)
+                    Équipements (un par ligne)
                   </label>
                   <textarea
-                    value={contentSections.house?.features?.map(f => `${f.title}|${f.description}`).join('\n') || ''}
+                    value={contentSections.house?.amenities?.join('\n') || ''}
                     onChange={(e) => setContentSections((prev: ContentSections) => ({
                       ...prev,
-                      house: { 
-                        ...prev.house, 
-                        features: e.target.value.split('\n').filter(l => l.trim()).map(line => {
-                          const [title, description] = line.split('|')
-                          return { title: title?.trim() || '', description: description?.trim() || '' }
-                        })
+                      house: {
+                        ...prev.house,
+                        amenities: e.target.value.split('\n').filter(item => item.trim())
                       }
                     }))}
                     rows={6}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent font-mono text-sm"
-                    placeholder="400m² habitables|Espaces optimisés pour le confort&#10;3 étages|Organisation pratique et fonctionnelle&#10;Jardin privatif|Espace extérieur pour se détendre&#10;Parking|Places réservées pour les colocataires"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Adresse
-                  </label>
-                  <input
-                    type="text"
-                    value={contentSections.house?.address || ''}
-                    onChange={(e) => setContentSections((prev: ContentSections) => ({
-                      ...prev,
-                      house: { ...prev.house, address: e.target.value }
-                    }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                    placeholder="123 rue de la République, 35170 Bruz"
+                    placeholder="Cuisine équipée moderne&#10;Grand salon lumineux&#10;Jardin aménagé&#10;Parking sécurisé&#10;Buanderie&#10;Espace coworking"
                   />
                 </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Images de la maison (URLs, une par ligne)
-                  </label>
-                  <textarea
-                    value={contentSections.house?.images?.join('\n') || ''}
-                    onChange={(e) => setContentSections((prev: ContentSections) => ({
-                      ...prev,
-                      house: { 
-                        ...prev.house, 
-                        images: e.target.value.split('\n').filter(url => url.trim())
-                      }
-                    }))}
-                    rows={4}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent font-mono text-sm"
-                    placeholder="/images/house-exterior.jpg&#10;/images/kitchen.jpg&#10;/images/living-room.jpg"
-                  />
-                </div>
+
+                <ImageUpload
+                  images={contentSections.house?.images || []}
+                  onImagesChange={(images) => setContentSections((prev: ContentSections) => ({
+                    ...prev,
+                    house: { ...prev.house, images }
+                  }))}
+                  type="house"
+                  maxImages={10}
+                  label="Images de la maison"
+                  showMetadata={true}
+                />
               </div>
             </div>
             
@@ -1260,24 +1602,8 @@ export default function CMSContent() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-semibold">Témoignages</h3>
-                <p className="text-sm text-gray-600">Gérez les témoignages affichés sur le site</p>
+                <p className="text-sm text-gray-600">Validez ou supprimez les témoignages reçus</p>
               </div>
-              <button
-                onClick={() => {
-                  setEditingTestimonial({
-                    name: '',
-                    role: '',
-                    content: '',
-                    rating: 5,
-                    isActive: true
-                  })
-                  setShowTestimonialModal(true)
-                }}
-                className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Ajouter un témoignage
-              </button>
             </div>
 
             {/* Liste des témoignages */}
@@ -1375,10 +1701,10 @@ export default function CMSContent() {
                         <input
                           type="text"
                           value={editingTestimonial?.name || ''}
-                          onChange={(e) => setEditingTestimonial(prev => ({
+                          onChange={(e) => setEditingTestimonial(prev => prev ? ({
                             ...prev,
                             name: e.target.value
-                          }))}
+                          }) : null)}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
                           required
                         />
@@ -1391,10 +1717,10 @@ export default function CMSContent() {
                         <input
                           type="text"
                           value={editingTestimonial?.role || ''}
-                          onChange={(e) => setEditingTestimonial(prev => ({
+                          onChange={(e) => setEditingTestimonial(prev => prev ? ({
                             ...prev,
                             role: e.target.value
-                          }))}
+                          }) : null)}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
                           placeholder="Étudiant en informatique"
                           required
@@ -1407,10 +1733,10 @@ export default function CMSContent() {
                         </label>
                         <textarea
                           value={editingTestimonial?.content || ''}
-                          onChange={(e) => setEditingTestimonial(prev => ({
+                          onChange={(e) => setEditingTestimonial(prev => prev ? ({
                             ...prev,
                             content: e.target.value
-                          }))}
+                          }) : null)}
                           rows={4}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
                           required
@@ -1426,10 +1752,10 @@ export default function CMSContent() {
                             <button
                               key={rating}
                               type="button"
-                              onClick={() => setEditingTestimonial(prev => ({
+                              onClick={() => setEditingTestimonial(prev => prev ? ({
                                 ...prev,
                                 rating
-                              }))}
+                              }) : null)}
                               className={`text-2xl ${
                                 rating <= (editingTestimonial?.rating || 0)
                                   ? 'text-yellow-400'
@@ -1447,10 +1773,10 @@ export default function CMSContent() {
                           type="checkbox"
                           id="isActive"
                           checked={editingTestimonial?.isActive ?? true}
-                          onChange={(e) => setEditingTestimonial(prev => ({
+                          onChange={(e) => setEditingTestimonial(prev => prev ? ({
                             ...prev,
                             isActive: e.target.checked
-                          }))}
+                          }) : null)}
                           className="mr-2"
                         />
                         <label htmlFor="isActive" className="text-sm text-gray-700">

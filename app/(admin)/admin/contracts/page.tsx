@@ -1,10 +1,10 @@
 'use client'
 
-import ContractsContent from './ContractsContent'
-
-export default function ContractsPage() {
-  return <ContractsContent />
-}
+import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
+import { Plus, Search, FileText, Eye, Edit2, X, Save, Download } from 'lucide-react'
+import { toast } from 'sonner'
+import { generateContractPDF } from '@/lib/pdf-generator'
 
 interface Contract {
   id: string
@@ -75,7 +75,7 @@ En deux exemplaires originaux
 {{ADMIN_SIGNATURE}}                {{TENANT_SIGNATURE}}
 `
 
-export default function ContractsPage() {
+function ContractsPage() {
   const [contracts, setContracts] = useState<Contract[]>([])
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null)
   const [showEditor, setShowEditor] = useState(false)
@@ -131,7 +131,7 @@ export default function ContractsPage() {
       name: contractName,
       content: contractContent,
       variables: extractVariables(contractContent),
-      isDefault: false,
+      isDefault: editingContract?.isDefault || false,
       createdAt: editingContract?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }
@@ -299,7 +299,6 @@ export default function ContractsPage() {
                     setShowEditor(true)
                   }}
                   className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors text-sm"
-                  disabled={contract.isDefault}
                 >
                   <Edit2 className="w-4 h-4" />
                   Modifier
@@ -458,3 +457,5 @@ export default function ContractsPage() {
     </div>
   )
 }
+
+export default ContractsPage

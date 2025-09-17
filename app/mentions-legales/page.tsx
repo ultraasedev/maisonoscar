@@ -14,16 +14,16 @@ export default function MentionsLegalesPage() {
   useEffect(() => {
     // Récupérer le contenu et les contacts
     Promise.all([
-      fetch('/api/cms/legal-pages?slug=mentions-legales'),
+      fetch('/api/cms/legal-pages?pageType=mentions-legales'),
       fetch('/api/cms/settings')
     ])
       .then(async ([legalRes, settingsRes]) => {
         const legalData = await legalRes.json()
         const settingsData = await settingsRes.json()
         
-        if (legalData.success && legalData.data?.length > 0) {
-          setTitle(legalData.data[0].title || 'Mentions légales')
-          setContent(legalData.data[0].content || getDefaultContent())
+        if (legalData.success && legalData.data) {
+          setTitle(legalData.data.title || 'Mentions légales')
+          setContent(legalData.data.content || getDefaultContent())
         } else {
           setContent(getDefaultContent())
         }
@@ -37,7 +37,7 @@ export default function MentionsLegalesPage() {
           }
           setContacts(newContacts)
           // Si pas de contenu personnalisé, utiliser le contenu par défaut avec les nouveaux contacts
-          if (!legalData.data?.length) {
+          if (!legalData.data) {
             setContent(getDefaultContent(newContacts))
           }
         }

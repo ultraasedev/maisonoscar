@@ -13,6 +13,31 @@ const defaultSections = {
     cta1: "Découvrir nos chambres",
     cta2: "Réserver une visite"
   },
+  about: {
+    badge: "Maison Oscar",
+    title: "Créateur de liens,",
+    titleAccent: "par nature",
+    description: "Nous révolutionnons la façon de vivre ensemble en créant des espaces modernes où se mélangent intimité personnelle et convivialité partagée.",
+    features: [
+      {
+        title: "Un nouveau mode de vie",
+        description: "Alliant intimité de votre chambre privée et richesse des espaces partagés pour créer des liens authentiques."
+      },
+      {
+        title: "Une communauté bienveillante",
+        description: "Sélection soigneuse des colocataires pour garantir une harmonie et des valeurs partagées."
+      },
+      {
+        title: "L'humain au centre",
+        description: "Car derrière chaque porte se cache une personnalité unique qui enrichit notre communauté."
+      },
+      {
+        title: "Tout inclus, tout simplifié",
+        description: "Charges, internet, ménage... concentrez-vous sur l'essentiel : vivre et créer des liens."
+      }
+    ],
+    cta: "Découvrir notre maison"
+  },
   problemSolution: {
     title: "Le co-living réinventé",
     subtitle: "pour créer des liens",

@@ -1,10 +1,24 @@
 'use client';
 
 import { motion, useInView } from 'framer-motion';
-import { Home, Users, Heart, Sparkles } from 'lucide-react';
+import { Home, Users, Heart, Sparkles, LucideIcon } from 'lucide-react';
 import { useRef, useState, useEffect } from 'react';
 
-const features = [
+interface Feature {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  delay: number;
+}
+
+const iconMap = {
+  home: Home,
+  users: Users,
+  heart: Heart,
+  sparkles: Sparkles
+};
+
+const defaultFeatures = [
   {
     icon: Home,
     title: 'Un nouveau mode de vie',
@@ -35,6 +49,7 @@ export const AboutSection = () => {
   const sectionRef = useRef(null);
   const isInView = useInView(sectionRef, { once: true, margin: "-100px" });
   const [roomStats, setRoomStats] = useState({ total: 0, available: 0 });
+  const [aboutData, setAboutData] = useState<any>(null);
 
   useEffect(() => {
     // Récupérer les stats des chambres depuis l'API
@@ -48,7 +63,31 @@ export const AboutSection = () => {
         }
       })
       .catch(console.error);
+
+    // Récupérer les données CMS pour la section About
+    fetch('/api/cms/sections')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.data?.about) {
+          setAboutData(data.data.about);
+        }
+      })
+      .catch(console.error);
   }, []);
+
+  // Utiliser les données CMS ou les valeurs par défaut
+  const badge = aboutData?.badge || 'Maison Oscar';
+  const title = aboutData?.title || 'Créateur de liens,';
+  const titleAccent = aboutData?.titleAccent || 'par nature';
+  const description = aboutData?.description || 'Nous révolutionnons la façon de vivre ensemble en créant des espaces modernes où se mélangent intimité personnelle et convivialité partagée.';
+  const cta = aboutData?.cta || 'Découvrir notre maison';
+
+  // Préparer les features avec les icônes
+  const features = aboutData?.features?.map((feature: any, index: number) => ({
+    ...feature,
+    icon: defaultFeatures[index]?.icon || Home,
+    delay: 0.1 + index * 0.1
+  })) || defaultFeatures;
 
   return (
     <section 
@@ -69,14 +108,14 @@ export const AboutSection = () => {
             className="inline-flex items-center gap-2 bg-[#F5F3F0] px-6 py-3 rounded-full text-sm font-medium text-black mb-8"
           >
             <div className="w-2 h-2 bg-black rounded-full"></div>
-            Maison Oscar
+            {badge}
           </motion.div>
 
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-black mb-6 leading-tight">
-            Créateur de liens,
+            {title}
             <br />
             <span className="relative text-gray-600">
-              par nature
+              {titleAccent}
               <motion.div
                 initial={{ scaleX: 0 }}
                 animate={isInView ? { scaleX: 1 } : { scaleX: 0 }}
@@ -87,15 +126,14 @@ export const AboutSection = () => {
           </h2>
           
           <p className="text-lg lg:text-xl text-gray-700 max-w-3xl mx-auto leading-relaxed">
-            Nous révolutionnons la façon de vivre ensemble en créant des espaces modernes 
-            où se mélangent intimité personnelle et convivialité partagée.
+            {description}
           </p>
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
           {/* Features */}
           <div className="space-y-8 lg:space-y-12">
-            {features.map((feature, index) => {
+            {features.map((feature: Feature, index: number) => {
               const Icon = feature.icon;
               return (
                 <motion.div 
@@ -187,7 +225,7 @@ export const AboutSection = () => {
             whileTap={{ scale: 0.95 }}
             className="inline-flex items-center gap-3 bg-black text-[#F5F3F0] px-8 py-4 rounded-xl font-semibold hover:bg-gray-800 transition-colors"
           >
-            Découvrir notre maison
+            {cta}
             <motion.div
               animate={{ x: [0, 5, 0] }}
               transition={{ duration: 1.5, repeat: Infinity }}

@@ -19,7 +19,6 @@ export default function SettingsContent() {
   const [settings, setSettings] = useState({
     // Notifications
     emailNotifications: true,
-    smsNotifications: false,
     paymentReminders: true,
     bookingAlerts: true,
     maintenanceAlerts: true,
@@ -313,22 +312,6 @@ export default function SettingsContent() {
                   </button>
                 </div>
                 
-                <div className="flex items-center justify-between p-4 hover:bg-gray-50 rounded-lg transition-colors">
-                  <div>
-                    <p className="font-medium">Notifications SMS</p>
-                    <p className="text-sm text-gray-600">Recevoir les alertes par SMS</p>
-                  </div>
-                  <button
-                    onClick={() => setSettings(prev => ({ ...prev, smsNotifications: !prev.smsNotifications }))}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      settings.smsNotifications ? 'bg-black' : 'bg-gray-300'
-                    }`}
-                  >
-                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      settings.smsNotifications ? 'translate-x-6' : 'translate-x-1'
-                    }`} />
-                  </button>
-                </div>
                 
                 <div className="flex items-center justify-between p-4 hover:bg-gray-50 rounded-lg transition-colors">
                   <div>
