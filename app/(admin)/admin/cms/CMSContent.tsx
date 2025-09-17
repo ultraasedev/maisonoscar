@@ -9,7 +9,20 @@ import {
   Phone, MapPin, Clock, ChevronRight, AlertCircle,
   Loader2, Check, X, Upload, Image as ImageIcon,
   Home, Car, TreePine, Bed, Bath, Wifi, Camera,
-  Shield, Zap, Utensils, Sofa, Tv, Gamepad2
+  Shield, Zap, Utensils, Sofa, Tv, Gamepad2,
+  Coffee, Waves, Sun, Moon, Star, Heart, Flame,
+  Snowflake, Umbrella, Wind, Mountain, Flower,
+  Key, Lock, Unlock, Compass, Thermometer,
+  Music, Volume2, Headphones, Bookmark, Book,
+  Laptop, Smartphone, Tablet, Watch, Printer,
+  Monitor, Keyboard, Mouse, Speaker, Battery,
+  Calculator, Calendar, Archive, Folder, File,
+  Search, Filter, Download, Cloud, Disc,
+  Cpu, HardDrive, Server, Database, Network,
+  Share, Link, Copy, Scissors, Paperclip,
+  Tag, Flag, Award, Trophy, Medal, Gift,
+  ShoppingCart, CreditCard, DollarSign, Euro,
+  Plane, Train, Ship, Bike, Bus, Truck
 } from 'lucide-react'
 import { toast } from 'sonner'
 import ImageUpload from '@/components/ui/ImageUpload'
@@ -55,9 +68,11 @@ interface ContentSections {
     buttonText?: string
   }
   footer: {
+    companyName?: string
     description?: string
     copyright?: string
-    quickLinks?: Array<{ label: string; href: string }>
+    navigationLinks?: Array<{ label: string; href: string }>
+    services?: string[]
   }
   commonSpaces?: any
 }
@@ -73,60 +88,214 @@ interface Testimonial {
 
 // Map des icônes disponibles pour les caractéristiques de maison
 const houseIconMap = {
+  // Logement de base
   home: Home,
-  users: Users,
-  car: Car,
-  tree: TreePine,
+  building: Building2,
   bed: Bed,
   bath: Bath,
+  sofa: Sofa,
+
+  // Services et équipements
   wifi: Wifi,
+  tv: Tv,
   camera: Camera,
-  shield: Shield,
   zap: Zap,
   utensils: Utensils,
-  sofa: Sofa,
-  tv: Tv,
+  coffee: Coffee,
+
+  // Transport et localisation
+  car: Car,
+  bike: Bike,
+  bus: Bus,
+  train: Train,
+  plane: Plane,
+  mapPin: MapPin,
+
+  // Sécurité et accès
+  shield: Shield,
+  key: Key,
+  lock: Lock,
+  unlock: Unlock,
+
+  // Nature et environnement
+  tree: TreePine,
+  flower: Flower,
+  sun: Sun,
+  moon: Moon,
+  star: Star,
+  mountain: Mountain,
+  waves: Waves,
+
+  // Technologie
+  laptop: Laptop,
+  smartphone: Smartphone,
+  tablet: Tablet,
+  printer: Printer,
+  monitor: Monitor,
+  keyboard: Keyboard,
+  mouse: Mouse,
+  speaker: Speaker,
+
+  // Loisirs et divertissement
   gamepad: Gamepad2,
-  building: Building2,
-  mapPin: MapPin
+  music: Music,
+  headphones: Headphones,
+  book: Book,
+
+  // Outils et objets
+  thermometer: Thermometer,
+  compass: Compass,
+  calculator: Calculator,
+  calendar: Calendar,
+  archive: Archive,
+  folder: Folder,
+
+  // Commerciaux
+  shoppingCart: ShoppingCart,
+  creditCard: CreditCard,
+  dollarSign: DollarSign,
+  euro: Euro,
+
+  // Personnes et social
+  users: Users,
+  heart: Heart,
+  gift: Gift,
+  award: Award,
+  trophy: Trophy,
+  medal: Medal,
+
+  // Autres
+  flame: Flame,
+  snowflake: Snowflake,
+  umbrella: Umbrella,
+  wind: Wind,
+  flag: Flag,
+  tag: Tag
 }
 
-// Composant sélecteur d'icône
+// Composant sélecteur d'icône amélioré
 const IconSelector = ({ selectedIcon, onIconSelect }: { selectedIcon: string, onIconSelect: (icon: string) => void }) => {
   const [isOpen, setIsOpen] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
 
   const SelectedIconComponent = houseIconMap[selectedIcon as keyof typeof houseIconMap] || Home
+
+  // Filtrer les icônes selon le terme de recherche
+  const filteredIcons = Object.entries(houseIconMap).filter(([key]) =>
+    key.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
+  // Grouper les icônes par catégorie
+  const iconCategories = {
+    'Logement': ['home', 'building', 'bed', 'bath', 'sofa'],
+    'Services': ['wifi', 'tv', 'camera', 'zap', 'utensils', 'coffee'],
+    'Transport': ['car', 'bike', 'bus', 'train', 'plane', 'mapPin'],
+    'Sécurité': ['shield', 'key', 'lock', 'unlock'],
+    'Nature': ['tree', 'flower', 'sun', 'moon', 'star', 'mountain', 'waves'],
+    'Technologie': ['laptop', 'smartphone', 'tablet', 'printer', 'monitor', 'keyboard', 'mouse', 'speaker'],
+    'Loisirs': ['gamepad', 'music', 'headphones', 'book'],
+    'Outils': ['thermometer', 'compass', 'calculator', 'calendar', 'archive', 'folder'],
+    'Commercial': ['shoppingCart', 'creditCard', 'dollarSign', 'euro'],
+    'Social': ['users', 'heart', 'gift', 'award', 'trophy', 'medal'],
+    'Autres': ['flame', 'snowflake', 'umbrella', 'wind', 'flag', 'tag']
+  }
 
   return (
     <div className="relative">
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors"
+        className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:border-gray-400 transition-colors min-w-[120px]"
       >
-        <SelectedIconComponent className="w-4 h-4" />
-        <span className="text-sm">{selectedIcon}</span>
-        <ChevronRight className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
+        <SelectedIconComponent className="w-4 h-4 flex-shrink-0" />
+        <span className="text-sm truncate flex-1">{selectedIcon}</span>
+        <ChevronRight className={`w-4 h-4 transition-transform flex-shrink-0 ${isOpen ? 'rotate-90' : ''}`} />
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10 p-3 grid grid-cols-4 gap-2 min-w-[200px]">
-          {Object.entries(houseIconMap).map(([key, IconComponent]) => (
+        <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-xl z-50 w-96 max-h-80 overflow-hidden">
+          {/* Barre de recherche */}
+          <div className="p-3 border-b border-gray-200">
+            <input
+              type="text"
+              placeholder="Rechercher une icône..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-black"
+            />
+          </div>
+
+          {/* Grille d'icônes */}
+          <div className="max-h-60 overflow-y-auto p-3">
+            {searchTerm ? (
+              // Vue filtrée
+              <div className="grid grid-cols-6 gap-2">
+                {filteredIcons.map(([key, IconComponent]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => {
+                      onIconSelect(key)
+                      setIsOpen(false)
+                      setSearchTerm('')
+                    }}
+                    className={`p-2 rounded hover:bg-gray-100 flex flex-col items-center gap-1 text-xs transition-colors ${
+                      selectedIcon === key ? 'bg-black text-white hover:bg-gray-800' : ''
+                    }`}
+                    title={key}
+                  >
+                    <IconComponent className="w-4 h-4" />
+                    <span className="truncate w-full text-center">{key}</span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              // Vue par catégories
+              <div className="space-y-4">
+                {Object.entries(iconCategories).map(([category, iconKeys]) => (
+                  <div key={category}>
+                    <h4 className="text-xs font-medium text-gray-600 mb-2">{category}</h4>
+                    <div className="grid grid-cols-6 gap-2">
+                      {iconKeys.map((key) => {
+                        const IconComponent = houseIconMap[key as keyof typeof houseIconMap]
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => {
+                              onIconSelect(key)
+                              setIsOpen(false)
+                            }}
+                            className={`p-2 rounded hover:bg-gray-100 flex flex-col items-center gap-1 text-xs transition-colors ${
+                              selectedIcon === key ? 'bg-black text-white hover:bg-gray-800' : ''
+                            }`}
+                            title={key}
+                          >
+                            <IconComponent className="w-4 h-4" />
+                            <span className="truncate w-full text-center">{key}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Bouton fermer */}
+          <div className="p-2 border-t border-gray-200 text-center">
             <button
-              key={key}
               type="button"
               onClick={() => {
-                onIconSelect(key)
                 setIsOpen(false)
+                setSearchTerm('')
               }}
-              className={`p-2 rounded hover:bg-gray-100 flex flex-col items-center gap-1 text-xs ${
-                selectedIcon === key ? 'bg-black text-white' : ''
-              }`}
+              className="text-xs text-gray-500 hover:text-gray-700"
             >
-              <IconComponent className="w-4 h-4" />
-              <span>{key}</span>
+              Fermer
             </button>
-          ))}
+          </div>
         </div>
       )}
     </div>
@@ -166,6 +335,11 @@ export default function CMSContent() {
     siret: string;
     capital: number;
     legalForm: string;
+    rcsNumber: string;
+    vatNumber: string;
+    legalAddress: string;
+    legalCity: string;
+    legalZipCode: string;
   }>({
     legalType: 'INDIVIDUAL',
     owners: [],
@@ -173,7 +347,12 @@ export default function CMSContent() {
     tradeName: '',
     siret: '',
     capital: 0,
-    legalForm: ''
+    legalForm: '',
+    rcsNumber: '',
+    vatNumber: '',
+    legalAddress: '',
+    legalCity: '',
+    legalZipCode: ''
   })
   
   const [socialLinks, setSocialLinks] = useState({
@@ -348,7 +527,28 @@ export default function CMSContent() {
       if (legalRes.ok) {
         const legalData = await legalRes.json()
         if (legalData.success) {
-          setLegalConfig(legalData.data)
+          // Normaliser les données pour éviter les valeurs null
+          const normalizedData = {
+            legalType: legalData.data.legalType || 'INDIVIDUAL',
+            owners: (legalData.data.owners || []).map((owner: any) => ({
+              firstName: owner.firstName || '',
+              lastName: owner.lastName || '',
+              email: owner.email || '',
+              phone: owner.phone || '',
+              address: owner.address || ''
+            })),
+            companyName: legalData.data.companyName || '',
+            tradeName: legalData.data.tradeName || '',
+            siret: legalData.data.siret || '',
+            capital: legalData.data.capital || 0,
+            legalForm: legalData.data.legalForm || '',
+            rcsNumber: legalData.data.rcsNumber || '',
+            vatNumber: legalData.data.vatNumber || '',
+            legalAddress: legalData.data.legalAddress || '',
+            legalCity: legalData.data.legalCity || '',
+            legalZipCode: legalData.data.legalZipCode || ''
+          }
+          setLegalConfig(normalizedData)
         }
       }
 
@@ -372,10 +572,30 @@ export default function CMSContent() {
       if (sectionsRes.ok) {
         const sectionsData = await sectionsRes.json()
         if (sectionsData.success) {
-          setContentSections(sectionsData.data)
+          setContentSections(prev => ({
+            ...sectionsData.data,
+            house: {
+              ...sectionsData.data.house
+            }
+          }))
         }
       }
-      
+
+      // Charger les images existantes de la maison
+      const houseImagesRes = await fetch('/api/cms/house-images')
+      if (houseImagesRes.ok) {
+        const houseImagesData = await houseImagesRes.json()
+        if (houseImagesData.success && houseImagesData.data.length > 0) {
+          setContentSections(prev => ({
+            ...prev,
+            house: {
+              ...prev.house,
+              images: houseImagesData.data
+            }
+          }))
+        }
+      }
+
       // Charger les témoignages
       const testimonialsRes = await fetch('/api/cms/testimonials')
       if (testimonialsRes.ok) {
@@ -779,7 +999,8 @@ export default function CMSContent() {
                             firstName: '',
                             lastName: '',
                             email: '',
-                            phone: ''
+                            phone: '',
+                            address: ''
                           }
                           setLegalConfig(prev => ({
                             ...prev,
@@ -901,18 +1122,163 @@ export default function CMSContent() {
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Contenu HTML
+                    Contenu des mentions légales
                   </label>
-                  <div className="mb-2 text-xs text-gray-500">
-                    Vous pouvez utiliser du HTML pour formater le contenu (h2, p, strong, ul, li, etc.)
+
+                  {/* Barre d'outils de formatage */}
+                  <div className="mb-2 p-2 bg-gray-50 border border-gray-300 rounded-t-lg flex flex-wrap gap-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const textarea = document.getElementById('mentions-content') as HTMLTextAreaElement
+                        const start = textarea.selectionStart
+                        const end = textarea.selectionEnd
+                        const selectedText = textarea.value.substring(start, end) || 'Titre principal'
+                        const newText = `<h1>${selectedText}</h1>`
+                        const newContent = textarea.value.substring(0, start) + newText + textarea.value.substring(end)
+                        setMentionsLegales(prev => ({ ...prev, content: newContent }))
+                        setTimeout(() => {
+                          textarea.focus()
+                          textarea.setSelectionRange(start + 4, start + 4 + selectedText.length)
+                        }, 0)
+                      }}
+                      className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100"
+                      title="Titre H1"
+                    >
+                      H1
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const textarea = document.getElementById('mentions-content') as HTMLTextAreaElement
+                        const start = textarea.selectionStart
+                        const end = textarea.selectionEnd
+                        const selectedText = textarea.value.substring(start, end) || 'Sous-titre'
+                        const newText = `<h2>${selectedText}</h2>`
+                        const newContent = textarea.value.substring(0, start) + newText + textarea.value.substring(end)
+                        setMentionsLegales(prev => ({ ...prev, content: newContent }))
+                        setTimeout(() => {
+                          textarea.focus()
+                          textarea.setSelectionRange(start + 4, start + 4 + selectedText.length)
+                        }, 0)
+                      }}
+                      className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100"
+                      title="Titre H2"
+                    >
+                      H2
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const textarea = document.getElementById('mentions-content') as HTMLTextAreaElement
+                        const start = textarea.selectionStart
+                        const end = textarea.selectionEnd
+                        const selectedText = textarea.value.substring(start, end) || 'Sous-sous-titre'
+                        const newText = `<h3>${selectedText}</h3>`
+                        const newContent = textarea.value.substring(0, start) + newText + textarea.value.substring(end)
+                        setMentionsLegales(prev => ({ ...prev, content: newContent }))
+                        setTimeout(() => {
+                          textarea.focus()
+                          textarea.setSelectionRange(start + 4, start + 4 + selectedText.length)
+                        }, 0)
+                      }}
+                      className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100"
+                      title="Titre H3"
+                    >
+                      H3
+                    </button>
+                    <div className="border-l border-gray-300 mx-1"></div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const textarea = document.getElementById('mentions-content') as HTMLTextAreaElement
+                        const start = textarea.selectionStart
+                        const end = textarea.selectionEnd
+                        const selectedText = textarea.value.substring(start, end) || 'texte en gras'
+                        const newText = `<strong>${selectedText}</strong>`
+                        const newContent = textarea.value.substring(0, start) + newText + textarea.value.substring(end)
+                        setMentionsLegales(prev => ({ ...prev, content: newContent }))
+                        setTimeout(() => {
+                          textarea.focus()
+                          textarea.setSelectionRange(start + 8, start + 8 + selectedText.length)
+                        }, 0)
+                      }}
+                      className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 font-bold"
+                      title="Gras"
+                    >
+                      B
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const textarea = document.getElementById('mentions-content') as HTMLTextAreaElement
+                        const start = textarea.selectionStart
+                        const end = textarea.selectionEnd
+                        const selectedText = textarea.value.substring(start, end) || 'texte en italique'
+                        const newText = `<em>${selectedText}</em>`
+                        const newContent = textarea.value.substring(0, start) + newText + textarea.value.substring(end)
+                        setMentionsLegales(prev => ({ ...prev, content: newContent }))
+                        setTimeout(() => {
+                          textarea.focus()
+                          textarea.setSelectionRange(start + 4, start + 4 + selectedText.length)
+                        }, 0)
+                      }}
+                      className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100 italic"
+                      title="Italique"
+                    >
+                      I
+                    </button>
+                    <div className="border-l border-gray-300 mx-1"></div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const textarea = document.getElementById('mentions-content') as HTMLTextAreaElement
+                        const start = textarea.selectionStart
+                        const newText = `<p>Nouveau paragraphe</p>\n`
+                        const newContent = textarea.value.substring(0, start) + newText + textarea.value.substring(start)
+                        setMentionsLegales(prev => ({ ...prev, content: newContent }))
+                        setTimeout(() => {
+                          textarea.focus()
+                          textarea.setSelectionRange(start + 3, start + 3 + 'Nouveau paragraphe'.length)
+                        }, 0)
+                      }}
+                      className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100"
+                      title="Paragraphe"
+                    >
+                      P
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const textarea = document.getElementById('mentions-content') as HTMLTextAreaElement
+                        const start = textarea.selectionStart
+                        const newText = `<ul>\n  <li>Élément 1</li>\n  <li>Élément 2</li>\n</ul>\n`
+                        const newContent = textarea.value.substring(0, start) + newText + textarea.value.substring(start)
+                        setMentionsLegales(prev => ({ ...prev, content: newContent }))
+                        setTimeout(() => {
+                          textarea.focus()
+                          textarea.setSelectionRange(start + 10, start + 10 + 'Élément 1'.length)
+                        }, 0)
+                      }}
+                      className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100"
+                      title="Liste à puces"
+                    >
+                      UL
+                    </button>
                   </div>
+
                   <textarea
+                    id="mentions-content"
                     value={mentionsLegales.content}
                     onChange={(e) => setMentionsLegales(prev => ({ ...prev, content: e.target.value }))}
                     rows={20}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent font-mono text-sm"
-                    placeholder="<h2>1. Informations légales</h2>..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-b-lg focus:ring-2 focus:ring-black focus:border-transparent font-mono text-sm"
+                    placeholder="Contenu des mentions légales..."
                   />
+
+                  <div className="mt-2 text-xs text-gray-500">
+                    💡 Sélectionnez du texte et cliquez sur les boutons pour le formater, ou utilisez directement du HTML
+                  </div>
                 </div>
                 
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -1374,8 +1740,8 @@ export default function CMSContent() {
                     house: { ...prev.house, images }
                   }))}
                   type="house"
-                  maxImages={10}
-                  label="Images de la maison"
+                  maxImages={6}
+                  label="Images de la maison (6 max pour le carrousel)"
                   showMetadata={true}
                 />
               </div>
@@ -1441,7 +1807,23 @@ export default function CMSContent() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Description du site
+                    Nom de l'entreprise
+                  </label>
+                  <input
+                    type="text"
+                    value={contentSections.footer?.companyName || ''}
+                    onChange={(e) => setContentSections((prev: ContentSections) => ({
+                      ...prev,
+                      footer: { ...prev.footer, companyName: e.target.value }
+                    }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                    placeholder="MAISON OSCAR"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Description
                   </label>
                   <textarea
                     value={contentSections.footer?.description || ''}
@@ -1451,13 +1833,13 @@ export default function CMSContent() {
                     }))}
                     rows={2}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                    placeholder="La Maison Oscar propose des logements étudiants de qualité à Bruz..."
+                    placeholder="Créateur de liens en Bretagne. Le co-living nouvelle génération avec une communauté bienveillante."
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Texte de copyright
+                    Copyright
                   </label>
                   <input
                     type="text"
@@ -1467,30 +1849,130 @@ export default function CMSContent() {
                       footer: { ...prev.footer, copyright: e.target.value }
                     }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                    placeholder="© 2025 Maison Oscar. Tous droits réservés."
+                    placeholder="© 2024 Maison Oscar. Tous droits réservés. Créateur de liens en Bretagne."
                   />
                 </div>
-                
+
+                {/* Navigation Links */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Liens rapides (format: Label|URL, un par ligne)
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Liens de navigation
                   </label>
-                  <textarea
-                    value={contentSections.footer?.quickLinks?.map(l => `${l.label}|${l.href}`).join('\n') || ''}
-                    onChange={(e) => setContentSections((prev: ContentSections) => ({
-                      ...prev,
-                      footer: { 
-                        ...prev.footer, 
-                        quickLinks: e.target.value.split('\n').filter(l => l.trim()).map(line => {
-                          const [label, href] = line.split('|')
-                          return { label: label?.trim() || '', href: href?.trim() || '' }
-                        })
-                      }
-                    }))}
-                    rows={4}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent font-mono text-sm"
-                    placeholder="Mentions légales|/mentions-legales&#10;Contact|#contact&#10;Chambres|#chambres&#10;À propos|#about"
-                  />
+                  <div className="space-y-2">
+                    {(contentSections.footer?.navigationLinks || []).map((link: any, index: number) => (
+                      <div key={index} className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Label"
+                          value={link.label || ''}
+                          onChange={(e) => {
+                            const newLinks = [...(contentSections.footer?.navigationLinks || [])]
+                            newLinks[index] = { ...newLinks[index], label: e.target.value }
+                            setContentSections((prev: ContentSections) => ({
+                              ...prev,
+                              footer: { ...prev.footer, navigationLinks: newLinks }
+                            }))
+                          }}
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        />
+                        <input
+                          type="text"
+                          placeholder="URL"
+                          value={link.href || ''}
+                          onChange={(e) => {
+                            const newLinks = [...(contentSections.footer?.navigationLinks || [])]
+                            newLinks[index] = { ...newLinks[index], href: e.target.value }
+                            setContentSections((prev: ContentSections) => ({
+                              ...prev,
+                              footer: { ...prev.footer, navigationLinks: newLinks }
+                            }))
+                          }}
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newLinks = (contentSections.footer?.navigationLinks || []).filter((_, i) => i !== index)
+                            setContentSections((prev: ContentSections) => ({
+                              ...prev,
+                              footer: { ...prev.footer, navigationLinks: newLinks }
+                            }))
+                          }}
+                          className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newLinks = [...(contentSections.footer?.navigationLinks || []), { label: '', href: '' }]
+                        setContentSections((prev: ContentSections) => ({
+                          ...prev,
+                          footer: { ...prev.footer, navigationLinks: newLinks }
+                        }))
+                      }}
+                      className="flex items-center gap-2 px-3 py-2 border border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition-colors text-sm text-gray-600"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Ajouter un lien
+                    </button>
+                  </div>
+                </div>
+
+                {/* Services */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Services
+                  </label>
+                  <div className="space-y-2">
+                    {(contentSections.footer?.services || []).map((service: string, index: number) => (
+                      <div key={index} className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Service"
+                          value={service || ''}
+                          onChange={(e) => {
+                            const newServices = [...(contentSections.footer?.services || [])]
+                            newServices[index] = e.target.value
+                            setContentSections((prev: ContentSections) => ({
+                              ...prev,
+                              footer: { ...prev.footer, services: newServices }
+                            }))
+                          }}
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newServices = (contentSections.footer?.services || []).filter((_, i) => i !== index)
+                            setContentSections((prev: ContentSections) => ({
+                              ...prev,
+                              footer: { ...prev.footer, services: newServices }
+                            }))
+                          }}
+                          className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newServices = [...(contentSections.footer?.services || []), '']
+                        setContentSections((prev: ContentSections) => ({
+                          ...prev,
+                          footer: { ...prev.footer, services: newServices }
+                        }))
+                      }}
+                      className="flex items-center gap-2 px-3 py-2 border border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition-colors text-sm text-gray-600"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Ajouter un service
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1602,8 +2084,18 @@ export default function CMSContent() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-semibold">Témoignages</h3>
-                <p className="text-sm text-gray-600">Validez ou supprimez les témoignages reçus</p>
+                <p className="text-sm text-gray-600">Gérez les témoignages affichés sur le site</p>
               </div>
+              <button
+                onClick={() => {
+                  setEditingTestimonial(null)
+                  setShowTestimonialModal(true)
+                }}
+                className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Ajouter
+              </button>
             </div>
 
             {/* Liste des témoignages */}

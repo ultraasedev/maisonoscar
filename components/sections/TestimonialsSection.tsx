@@ -16,7 +16,8 @@ interface Testimonial {
   highlight: string;
 }
 
-const testimonials: Testimonial[] = [
+// Fallback testimonials
+const fallbackTestimonials: Testimonial[] = [
   {
     name: 'Marie D.',
     age: 24,
@@ -46,26 +47,6 @@ const testimonials: Testimonial[] = [
     avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=100',
     room: 'Studio Cosy',
     highlight: 'Rapport qualité-prix imbattable'
-  },
-  {
-    name: 'Alexis R.',
-    age: 26,
-    occupation: 'Designer UX',
-    content: 'L\'environnement est inspirant et les colocataires sont bienveillants. C\'est exactement ce que je cherchais pour concilier travail et vie sociale. Les espaces de travail sont top !',
-    rating: 5,
-    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=100',
-    room: 'Chambre Design',
-    highlight: 'Parfait équilibre travail-vie sociale'
-  },
-  {
-    name: 'Sarah K.',
-    age: 23,
-    occupation: 'Journaliste',
-    content: 'Maison Oscar a dépassé toutes mes attentes. L\'ambiance familiale, les équipements modernes, et la flexibilité du contrat... tout est réuni pour se sentir chez soi !',
-    rating: 5,
-    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=100',
-    room: 'Espace Nature',
-    highlight: 'Dépasse toutes les attentes'
   }
 ];
 
@@ -145,31 +126,80 @@ export const TestimonialsSection = () => {
   const isInView = useInView(sectionRef, { once: true, margin: "-100px" });
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Auto-play functionality
+  // Charger les témoignages depuis l'API
   useEffect(() => {
-    if (!isAutoPlaying) return;
-    
+    const fetchTestimonials = async () => {
+      try {
+        const response = await fetch('/api/cms/testimonials');
+        const data = await response.json();
+
+        if (data.success && data.data.length > 0) {
+          // Convertir les témoignages de la base vers le format du composant
+          const formattedTestimonials = data.data
+            .filter((t: any) => t.isActive)
+            .map((t: any) => ({
+              name: t.name,
+              age: t.age || 25,
+              occupation: t.role || t.occupation || 'Résident',
+              content: t.content,
+              rating: t.rating || 5,
+              avatar: t.avatar || '',
+              room: t.room || 'Chambre',
+              highlight: t.highlight || t.content.substring(0, 50) + '...'
+            }));
+
+          setTestimonials(formattedTestimonials.length > 0 ? formattedTestimonials : fallbackTestimonials);
+        } else {
+          setTestimonials(fallbackTestimonials);
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des témoignages:', error);
+        setTestimonials(fallbackTestimonials);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTestimonials();
+  }, []);
+
+  // Auto-play functionality - défilement par groupe de 3
+  useEffect(() => {
+    if (!isAutoPlaying || testimonials.length <= 3) return;
+
+    const maxGroups = Math.ceil(testimonials.length / 3);
     const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % testimonials.length);
-    }, 5000);
+      setCurrentIndex((prev) => (prev + 1) % maxGroups);
+    }, 6000);
 
     return () => clearInterval(interval);
-  }, [isAutoPlaying]);
+  }, [isAutoPlaying, testimonials.length]);
+
+  // Navigation par groupes de 3
+  const maxGroups = Math.ceil(testimonials.length / 3);
 
   const nextTestimonial = () => {
-    setCurrentIndex((prev) => (prev + 1) % testimonials.length);
+    setCurrentIndex((prev) => (prev + 1) % maxGroups);
     setIsAutoPlaying(false);
   };
 
   const prevTestimonial = () => {
-    setCurrentIndex((prev) => (prev - 1 + testimonials.length) % testimonials.length);
+    setCurrentIndex((prev) => (prev - 1 + maxGroups) % maxGroups);
     setIsAutoPlaying(false);
   };
 
   const goToTestimonial = (index: number) => {
     setCurrentIndex(index);
     setIsAutoPlaying(false);
+  };
+
+  // Obtenir les témoignages pour le groupe actuel
+  const getCurrentTestimonials = () => {
+    const startIndex = currentIndex * 3;
+    return testimonials.slice(startIndex, startIndex + 3);
   };
 
   const [showReviewModal, setShowReviewModal] = useState(false);
@@ -198,7 +228,7 @@ export const TestimonialsSection = () => {
             className="inline-flex items-center gap-2 bg-[#F5F3F0] px-4 py-2 rounded-full text-sm font-medium text-black mb-6"
           >
             <Star className="w-4 h-4 text-yellow-500 fill-current" />
-            4.9/5 sur {testimonials.length} avis
+            {loading ? 'Chargement...' : `4.9/5 sur ${testimonials.length} avis`}
           </motion.div>
 
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-black mb-6 leading-tight">
@@ -221,75 +251,133 @@ export const TestimonialsSection = () => {
           </p>
         </motion.div>
 
-        {/* Mobile Carousel */}
-        <div className="lg:hidden">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
-            transition={{ duration: 0.8, delay: 0.3 }}
-            className="relative"
-          >
-            <AnimatePresence mode="wait">
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
+            <p className="mt-4 text-gray-600">Chargement des témoignages...</p>
+          </div>
+        ) : (
+          <>
+            {/* Mobile Carousel */}
+            <div className="lg:hidden">
               <motion.div
-                key={currentIndex}
-                initial={{ opacity: 0, x: 50 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -50 }}
-                transition={{ duration: 0.3 }}
+                initial={{ opacity: 0, y: 30 }}
+                animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
+                transition={{ duration: 0.8, delay: 0.3 }}
+                className="relative"
               >
-                <TestimonialCard testimonial={testimonials[currentIndex]} isActive={true} />
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={currentIndex}
+                    initial={{ opacity: 0, x: 50 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -50 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <TestimonialCard testimonial={testimonials[currentIndex] || fallbackTestimonials[0]} isActive={true} />
+                  </motion.div>
+                </AnimatePresence>
+
+                {/* Navigation Buttons - seulement si plus d'un témoignage */}
+                {testimonials.length > 1 && (
+                  <div className="flex items-center justify-between mt-6">
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={prevTestimonial}
+                      className="w-12 h-12 bg-black text-[#F5F3F0] rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </motion.button>
+
+                    {/* Dots - pour les groupes sur mobile aussi */}
+                    <div className="flex space-x-2">
+                      {Array.from({ length: maxGroups }).map((_, index) => (
+                        <button
+                          key={index}
+                          onClick={() => goToTestimonial(index)}
+                          className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                            index === currentIndex ? 'bg-black w-6' : 'bg-gray-300'
+                          }`}
+                        />
+                      ))}
+                    </div>
+
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={nextTestimonial}
+                      className="w-12 h-12 bg-black text-[#F5F3F0] rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </motion.button>
+                  </div>
+                )}
               </motion.div>
-            </AnimatePresence>
-
-            {/* Navigation Buttons */}
-            <div className="flex items-center justify-between mt-6">
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={prevTestimonial}
-                className="w-12 h-12 bg-black text-[#F5F3F0] rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </motion.button>
-
-              {/* Dots */}
-              <div className="flex space-x-2">
-                {testimonials.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => goToTestimonial(index)}
-                    className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                      index === currentIndex ? 'bg-black w-6' : 'bg-gray-300'
-                    }`}
-                  />
-                ))}
-              </div>
-
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={nextTestimonial}
-                className="w-12 h-12 bg-black text-[#F5F3F0] rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </motion.button>
             </div>
-          </motion.div>
-        </div>
 
-        {/* Desktop Grid */}
-        <div className="hidden lg:grid lg:grid-cols-3 gap-8">
-          {testimonials.slice(0, 3).map((testimonial, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 30 }}
-              animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
-              transition={{ duration: 0.6, delay: 0.3 + index * 0.2 }}
-            >
-              <TestimonialCard testimonial={testimonial} isActive={true} />
-            </motion.div>
-          ))}
-        </div>
+            {/* Desktop Grid - affichage par groupes de 3 */}
+            <div className="hidden lg:block">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentIndex}
+                  initial={{ opacity: 0, x: 50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -50 }}
+                  transition={{ duration: 0.4 }}
+                  className="grid grid-cols-3 gap-8"
+                >
+                  {getCurrentTestimonials().map((testimonial, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, y: 30 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.6, delay: index * 0.2 }}
+                    >
+                      <TestimonialCard testimonial={testimonial} isActive={true} />
+                    </motion.div>
+                  ))}
+                </motion.div>
+              </AnimatePresence>
+
+              {/* Navigation Desktop - seulement si plus de 3 témoignages */}
+              {testimonials.length > 3 && (
+                <div className="flex items-center justify-center mt-8 gap-4">
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={prevTestimonial}
+                    className="w-12 h-12 bg-black text-[#F5F3F0] rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </motion.button>
+
+                  {/* Dots pour les groupes */}
+                  <div className="flex space-x-2">
+                    {Array.from({ length: maxGroups }).map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => goToTestimonial(index)}
+                        className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                          index === currentIndex ? 'bg-black' : 'bg-gray-300'
+                        }`}
+                      />
+                    ))}
+                  </div>
+
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={nextTestimonial}
+                    className="w-12 h-12 bg-black text-[#F5F3F0] rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </motion.button>
+                </div>
+              )}
+            </div>
+          </>
+        )}
 
         {/* Bottom CTA */}
         <motion.div

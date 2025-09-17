@@ -42,11 +42,6 @@ export const Footer = () => {
     'Support 7j/7'
   ];
 
-  const contactInfo = [
-    contacts.address,
-    contacts.phone,
-    contacts.email
-  ];
 
   return (
     <footer className="bg-gray-900 text-white py-12">
@@ -97,9 +92,23 @@ export const Footer = () => {
           <div>
             <h4 className="font-semibold mb-4">Contact</h4>
             <ul className="space-y-2 text-gray-400">
-              {contactInfo.map((info, index) => (
-                <li key={index}>{info}</li>
-              ))}
+              <li>{contacts.address}</li>
+              <li>
+                <a
+                  href={`tel:${contacts.phone}`}
+                  className="hover:text-white transition-colors hover:underline"
+                >
+                  {contacts.phone}
+                </a>
+              </li>
+              <li>
+                <a
+                  href={`mailto:${contacts.email}`}
+                  className="hover:text-white transition-colors hover:underline"
+                >
+                  {contacts.email}
+                </a>
+              </li>
             </ul>
           </div>
         </div>

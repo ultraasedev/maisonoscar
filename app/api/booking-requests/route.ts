@@ -11,7 +11,7 @@ const CreateBookingRequestSchema = z.object({
   desiredStartDate: z.string().transform(str => new Date(str)),
   desiredDuration: z.number().int().min(1),
   hasLivedInColiving: z.boolean(),
-  
+
   // Informations personnelles
   firstName: z.string().min(1),
   lastName: z.string().min(1),
@@ -21,13 +21,13 @@ const CreateBookingRequestSchema = z.object({
   birthPlace: z.string().min(1),
   nationality: z.string().min(1),
   maritalStatus: z.string().min(1),
-  
+
   // Situation logement
   currentHousingSituation: z.enum(['TENANT', 'OWNER', 'HOSTED']),
   currentAddress: z.string().min(1),
   currentCity: z.string().min(1),
   currentZipCode: z.string().min(1),
-  
+
   // Si mineur
   isMinor: z.boolean(),
   legalGuardian1FirstName: z.string().optional(),
@@ -35,27 +35,27 @@ const CreateBookingRequestSchema = z.object({
   legalGuardian1Phone: z.string().optional(),
   legalGuardian1Email: z.string().optional(),
   legalGuardian1Address: z.string().optional(),
-  
+
   legalGuardian2FirstName: z.string().optional(),
   legalGuardian2LastName: z.string().optional(),
   legalGuardian2Phone: z.string().optional(),
   legalGuardian2Email: z.string().optional(),
   legalGuardian2Address: z.string().optional(),
-  
-  // Situation professionnelle
-  professionalStatus: z.enum(['EMPLOYEE', 'SELF_EMPLOYED', 'STUDENT', 'ALTERNANT', 'UNEMPLOYED', 'OTHER']),
+
+  // Situation professionnelle - Ajout de BUSINESS_OWNER
+  professionalStatus: z.enum(['EMPLOYEE', 'SELF_EMPLOYED', 'BUSINESS_OWNER', 'STUDENT', 'ALTERNANT', 'UNEMPLOYED', 'OTHER']),
   employerName: z.string().optional(),
   employerAddress: z.string().optional(),
   position: z.string().optional(),
   monthlyIncome: z.number().optional(),
   contractType: z.string().optional(),
   contractStartDate: z.string().optional().transform(str => str ? new Date(str) : undefined),
-  
+
   // Pour étudiants
   schoolName: z.string().optional(),
   studyLevel: z.string().optional(),
   studyField: z.string().optional(),
-  
+
   // Garant
   hasGuarantor: z.boolean(),
   guarantorType: z.enum(['INDIVIDUAL', 'VISALE', 'COMPANY', 'NONE']),
@@ -68,16 +68,38 @@ const CreateBookingRequestSchema = z.object({
   guarantorMonthlyIncome: z.number().optional(),
   guarantorEmployerName: z.string().optional(),
   guarantorProfession: z.string().optional(),
-  
-  // Colocataires
+
+  // Garants multiples (nouveaux champs)
+  guarantors: z.array(z.object({
+    firstName: z.string(),
+    lastName: z.string(),
+    email: z.string().email(),
+    phone: z.string(),
+    address: z.string(),
+    relationship: z.string(),
+    monthlyIncome: z.number().optional(),
+    profession: z.string().optional(),
+    employerName: z.string().optional(),
+    assignedTo: z.string().optional(), // 'ALL' ou ID du colocataire
+    documents: z.any().optional()
+  })).optional(),
+
+  // Colocataires avec informations étendues
   roommates: z.array(z.object({
     firstName: z.string(),
     lastName: z.string(),
     email: z.string().email(),
     phone: z.string(),
-    birthDate: z.string()
+    birthDate: z.string(),
+    birthPlace: z.string(),
+    profession: z.string(),
+    professionalStatus: z.enum(['EMPLOYEE', 'SELF_EMPLOYED', 'BUSINESS_OWNER', 'STUDENT', 'ALTERNANT', 'UNEMPLOYED', 'OTHER']),
+    currentAddress: z.string(),
+    currentCity: z.string(),
+    currentZipCode: z.string(),
+    documents: z.any().optional()
   })).optional(),
-  
+
   // Documents et statut
   documents: z.any().optional(),
   status: z.enum(['DRAFT', 'SUBMITTED']).optional()
@@ -154,14 +176,17 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Extraire les colocataires du body
-    const { roommates, ...bookingData } = validatedData
-    
+    // Extraire les colocataires et garants du body
+    const { roommates, guarantors, ...bookingData } = validatedData
+
+    // Pas besoin de mapper BUSINESS_OWNER maintenant qu'il est supporté dans le schéma
+    const mappedBookingData = bookingData
+
     // Créer la demande avec les colocataires
     const bookingRequest = await prisma.bookingRequest.create({
       data: {
-        ...bookingData,
-        submittedAt: bookingData.status === 'SUBMITTED' ? new Date() : undefined,
+        ...mappedBookingData,
+        submittedAt: mappedBookingData.status === 'SUBMITTED' ? new Date() : undefined,
         ...(roommates && roommates.length > 0 ? {
           roommates: {
             create: roommates.map(rm => ({
@@ -175,7 +200,8 @@ export async function POST(request: NextRequest) {
         } : {})
       },
       include: {
-        room: true
+        room: true,
+        roommates: true
       }
     })
     
@@ -203,10 +229,22 @@ export async function POST(request: NextRequest) {
       const admins = await prisma.user.findMany({
         where: { role: 'ADMIN' }
       })
-      
+
       // Importer le service WhatsApp
       const { notifyNewBookingRequest } = await import('@/lib/whatsapp')
-      
+
+      // Construire l'info des colocataires pour l'email
+      const roommateInfo = roommates && roommates.length > 0
+        ? `<p><strong>Colocataires :</strong> ${roommates.map(rm => `${rm.firstName} ${rm.lastName}`).join(', ')}</p>`
+        : ''
+
+      // Construire l'info des garants pour l'email
+      const guarantorInfo = guarantors && guarantors.length > 0
+        ? `<p><strong>Garants :</strong> ${guarantors.map(g => `${g.firstName} ${g.lastName}`).join(', ')}</p>`
+        : validatedData.hasGuarantor && validatedData.guarantorFirstName
+        ? `<p><strong>Garant :</strong> ${validatedData.guarantorFirstName} ${validatedData.guarantorLastName}</p>`
+        : ''
+
       for (const admin of admins) {
         // Email
         await sendEmail(
@@ -216,17 +254,19 @@ export async function POST(request: NextRequest) {
           <h2>Nouvelle demande de réservation</h2>
           <p>Une nouvelle demande vient d'être soumise.</p>
           <br>
-          <p><strong>Candidat :</strong> ${validatedData.firstName} ${validatedData.lastName}</p>
+          <p><strong>Candidat principal :</strong> ${validatedData.firstName} ${validatedData.lastName}</p>
           <p><strong>Email :</strong> ${validatedData.email}</p>
           <p><strong>Téléphone :</strong> ${validatedData.phone}</p>
           <p><strong>Chambre demandée :</strong> ${room.name}</p>
           <p><strong>Date de début :</strong> ${new Date(validatedData.desiredStartDate).toLocaleDateString('fr-FR')}</p>
           <p><strong>Durée :</strong> ${validatedData.desiredDuration} mois</p>
+          ${roommateInfo}
+          ${guarantorInfo}
           <br>
           <p><a href="${process.env.NEXTAUTH_URL}/admin/prospects" style="background: black; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Voir le dossier</a></p>
           `
         )
-        
+
         // WhatsApp si le numéro est configuré
         if (admin.phone) {
           await notifyNewBookingRequest(admin.phone, {

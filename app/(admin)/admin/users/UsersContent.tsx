@@ -545,12 +545,12 @@ export default function UsersContent() {
               {/* Actions en masse - affiché même si aucune sélection avec message */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    className="w-full"
+                  <Button
+                    variant="outline"
+                    className="w-full relative"
                     disabled={selectedUsers.length === 0}
                   >
-                    {selectedUsers.length > 0 
+                    {selectedUsers.length > 0
                       ? `Actions (${selectedUsers.length} sélectionné${selectedUsers.length > 1 ? 's' : ''})`
                       : 'Actions (sélectionnez d\'abord)'
                     }
@@ -558,15 +558,24 @@ export default function UsersContent() {
                 </DropdownMenuTrigger>
                 {selectedUsers.length > 0 && (
                   <DropdownMenuContent className="w-48">
-                    <DropdownMenuItem onClick={() => handleBulkAction('ACTIVE')}>
+                    <DropdownMenuItem
+                      onClick={() => handleBulkAction('ACTIVE')}
+                      className="cursor-pointer"
+                    >
                       <UserCheck className="h-4 w-4 mr-2" />
                       Activer
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleBulkAction('INACTIVE')}>
+                    <DropdownMenuItem
+                      onClick={() => handleBulkAction('INACTIVE')}
+                      className="cursor-pointer"
+                    >
                       <UserX className="h-4 w-4 mr-2" />
                       Désactiver
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleBulkAction('SUSPENDED')}>
+                    <DropdownMenuItem
+                      onClick={() => handleBulkAction('SUSPENDED')}
+                      className="cursor-pointer"
+                    >
                       <Shield className="h-4 w-4 mr-2" />
                       Suspendre
                     </DropdownMenuItem>
@@ -677,44 +686,51 @@ export default function UsersContent() {
                         </div>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" className="relative">
                               <MoreVertical className="h-4 w-4" />
+                              <span className="sr-only">Actions</span>
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => {
-                              setEditingUser(user)
-                              setModalOpen(true)
-                            }}>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setEditingUser(user)
+                                setModalOpen(true)
+                              }}
+                              className="cursor-pointer"
+                            >
                               <Edit2 className="h-4 w-4 mr-2" />
                               Modifier
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               onClick={() => handleStatusChange(user.id, 'ACTIVE')}
                               disabled={user.status === 'ACTIVE'}
+                              className="cursor-pointer"
                             >
                               <UserCheck className="h-4 w-4 mr-2" />
                               Activer
                             </DropdownMenuItem>
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               onClick={() => handleStatusChange(user.id, 'INACTIVE')}
                               disabled={user.status === 'INACTIVE'}
+                              className="cursor-pointer"
                             >
                               <UserX className="h-4 w-4 mr-2" />
                               Désactiver
                             </DropdownMenuItem>
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               onClick={() => handleStatusChange(user.id, 'SUSPENDED')}
                               disabled={user.status === 'SUSPENDED'}
+                              className="cursor-pointer"
                             >
                               <Shield className="h-4 w-4 mr-2" />
                               Suspendre
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               onClick={() => handleDelete(user)}
-                              className="text-red-600"
+                              className="text-red-600 cursor-pointer"
                             >
                               <Trash2 className="h-4 w-4 mr-2" />
                               Supprimer
@@ -836,44 +852,51 @@ export default function UsersContent() {
                         <td className="px-6 py-4">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
+                              <Button variant="ghost" size="sm" className="relative">
                                 <MoreVertical className="h-4 w-4" />
+                                <span className="sr-only">Actions</span>
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => {
-                                setEditingUser(user)
-                                setModalOpen(true)
-                              }}>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setEditingUser(user)
+                                  setModalOpen(true)
+                                }}
+                                className="cursor-pointer"
+                              >
                                 <Edit2 className="h-4 w-4 mr-2" />
                                 Modifier
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem 
+                              <DropdownMenuItem
                                 onClick={() => handleStatusChange(user.id, 'ACTIVE')}
                                 disabled={user.status === 'ACTIVE'}
+                                className="cursor-pointer"
                               >
                                 <UserCheck className="h-4 w-4 mr-2" />
                                 Activer
                               </DropdownMenuItem>
-                              <DropdownMenuItem 
+                              <DropdownMenuItem
                                 onClick={() => handleStatusChange(user.id, 'INACTIVE')}
                                 disabled={user.status === 'INACTIVE'}
+                                className="cursor-pointer"
                               >
                                 <UserX className="h-4 w-4 mr-2" />
                                 Désactiver
                               </DropdownMenuItem>
-                              <DropdownMenuItem 
+                              <DropdownMenuItem
                                 onClick={() => handleStatusChange(user.id, 'SUSPENDED')}
                                 disabled={user.status === 'SUSPENDED'}
+                                className="cursor-pointer"
                               >
                                 <Shield className="h-4 w-4 mr-2" />
                                 Suspendre
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem 
+                              <DropdownMenuItem
                                 onClick={() => handleDelete(user)}
-                                className="text-red-600"
+                                className="text-red-600 cursor-pointer"
                               >
                                 <Trash2 className="h-4 w-4 mr-2" />
                                 Supprimer

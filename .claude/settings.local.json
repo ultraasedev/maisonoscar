@@ -6,7 +6,11 @@
       "Bash(docker-compose:*)",
       "Bash(docker-compose up:*)",
       "Bash(docker compose:*)",
-      "Bash(docker logs:*)"
+      "Bash(docker logs:*)",
+      "Bash(npx prisma:*)",
+      "Bash(node:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(pnpm list:*)"
     ],
     "deny": [],
     "ask": []

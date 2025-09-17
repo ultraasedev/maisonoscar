@@ -101,6 +101,7 @@ enum HousingSituation {
 enum ProfessionalStatus {
   EMPLOYEE          // Salarié
   SELF_EMPLOYED     // Auto-entrepreneur
+  BUSINESS_OWNER    // Chef d'entreprise
   STUDENT           // Étudiant
   ALTERNANT         // Alternant
   UNEMPLOYED        // Sans emploi

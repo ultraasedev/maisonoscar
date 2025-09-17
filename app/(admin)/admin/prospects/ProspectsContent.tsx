@@ -91,6 +91,7 @@ const statusConfig = {
 const professionalStatusLabels = {
   EMPLOYEE: 'Salarié(e)',
   SELF_EMPLOYED: 'Auto-entrepreneur',
+  BUSINESS_OWNER: 'Chef d\'entreprise',
   STUDENT: 'Étudiant(e)',
   ALTERNANT: 'Alternant(e)',
   UNEMPLOYED: 'Sans emploi',

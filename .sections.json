@@ -1,4 +1,11 @@
 {
+  "hero": {
+    "title": "Votre nouvelle Maison",
+    "subtitle": "en colocation à Bruz",
+    "description": "Découvrez une nouvelle façon de vivre en communauté dans notre maison de charme, où chaque espace a été pensé pour favoriser le partage et le bien-être.",
+    "cta1": "Découvrir nos chambres",
+    "cta2": "Réserver une visite"
+  },
   "about": {
     "badge": "Maison Oscar",
     "title": "Créateur de liens,",
@@ -23,13 +30,6 @@
       }
     ],
     "cta": "Découvrir notre maison"
-  },
-  "hero": {
-    "title": "Votre nouvelle Zonme",
-    "subtitle": "en colocation à Bruz",
-    "description": "Découvrez une nouvelle façon de vivre en communauté dans notre maison de charme, où chaque espace a été pensé pour favoriser le partage et le bien-être.",
-    "cta1": "Découvrir nos chambres",
-    "cta2": "Réserver une visite"
   },
   "problemSolution": {
     "title": "Le co-living réinventé",
@@ -100,30 +100,6 @@
       "Local vélos"
     ]
   },
-  "rooms": {
-    "title": "Nos chambres",
-    "titleAccent": "uniques",
-    "description": "Chaque chambre a été pensée pour créer votre cocon personnel tout en favorisant les rencontres dans nos espaces communs.",
-    "cta": "Découvrir les chambres"
-  },
-  "footer": {
-    "companyName": "MAISON OSCAR",
-    "description": "Créateur de liens en Bretagne. Le co-living nouvelle génération avec une communauté bienveillante.",
-    "copyright": "© 2024 Maison Oscar. Tous droits réservés. Créateur de liens en Bretagne.",
-    "navigationLinks": [
-      { "label": "Accueil", "href": "#accueil" },
-      { "label": "Le co-living", "href": "#coliving" },
-      { "label": "Notre maison", "href": "#maison" },
-      { "label": "Chambres", "href": "#chambres" },
-      { "label": "Mentions légales", "href": "/mentions-legales" }
-    ],
-    "services": [
-      "Chambres meublées",
-      "Espaces partagés",
-      "Communauté active",
-      "Support 7j/7"
-    ]
-  },
   "commonSpaces": {
     "title": "Espaces communs inclus",
     "items": [
@@ -143,6 +119,45 @@
         "title": "Ménage inclus",
         "description": "Parties communes"
       }
+    ]
+  },
+  "rooms": {
+    "title": "Nos chambres",
+    "titleAccent": "uniques",
+    "description": "Chaque chambre a été pensée pour créer votre cocon personnel tout en favorisant les rencontres dans nos espaces communs.",
+    "cta": "Découvrir les chambres"
+  },
+  "footer": {
+    "companyName": "MAISON OSCAR",
+    "description": "Créateur de liens en Bretagne. Le co-living nouvelle génération avec une communauté bienveillante.",
+    "copyright": "© 2024 Maison Oscar. Tous droits réservés. Créateur de liens en Bretagne.",
+    "navigationLinks": [
+      {
+        "label": "Accueil",
+        "href": "#accueil"
+      },
+      {
+        "label": "Le co-living",
+        "href": "#coliving"
+      },
+      {
+        "label": "Notre maison",
+        "href": "#maison"
+      },
+      {
+        "label": "Chambres",
+        "href": "#chambres"
+      },
+      {
+        "label": "Mentions légales",
+        "href": "/mentions-legales"
+      }
+    ],
+    "services": [
+      "Chambres meublées",
+      "Espaces partagés",
+      "Communauté active",
+      "Support 7j/7"
     ]
   }
 }
