@@ -1,344 +1,91 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { 
-  Plus, 
-  Search, 
-  MoreVertical, 
-  Edit2, 
-  Trash2, 
-  UserCheck,
-  UserX,
-  Shield,
-  Users as UsersIcon,
-  Mail,
-  Phone,
-  Calendar
-} from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { motion } from 'framer-motion'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator
-} from '@/components/ui/dropdown-menu'
-
+  Users, Plus, Edit2, Trash2, Search, UserCheck, UserX,
+  Mail, Phone, Calendar, Eye, X, Check, AlertCircle
+} from 'lucide-react'
 import { toast } from 'sonner'
+import DeleteConfirmModal from '@/components/ui/DeleteConfirmModal'
+
 interface User {
   id: string
-  email: string
   firstName: string
   lastName: string
+  email: string
   phone?: string
-  role: 'ADMIN' | 'MANAGER'
+  role: 'USER' | 'ADMIN' | 'MANAGER'
   status: 'ACTIVE' | 'INACTIVE' | 'PENDING' | 'SUSPENDED'
   createdAt: string
-  updatedAt: string
-  _count?: {
+  _count: {
     bookings: number
     contacts: number
-    payments?: number
   }
-}
-
-// Composant Modal intégré
-function UserModalIntegrated({ isOpen, onClose, user, onSuccess }: {
-  isOpen: boolean
-  onClose: () => void
-  user: User | null
-  onSuccess: () => void
-}) {
-  const [formData, setFormData] = useState({
-    email: '',
-    firstName: '',
-    lastName: '',
-    phone: '',
-    role: 'MANAGER' as 'ADMIN' | 'MANAGER',
-    status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE' | 'PENDING' | 'SUSPENDED',
-    password: '',
-    sendEmail: true
-  })
-  const [loading, setLoading] = useState(false)
-  const [errors, setErrors] = useState<Record<string, string>>({})
-
-  useEffect(() => {
-    if (user) {
-      setFormData({
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        phone: user.phone || '',
-        role: user.role,
-        status: user.status,
-        password: '',
-        sendEmail: false
-      })
-    } else {
-      setFormData({
-        email: '',
-        firstName: '',
-        lastName: '',
-        phone: '',
-        role: 'MANAGER',
-        status: 'ACTIVE',
-        password: '',
-        sendEmail: true
-      })
-    }
-    setErrors({})
-  }, [user])
-
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {}
-
-    if (!formData.email) {
-      newErrors.email = 'L\'email est requis'
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email invalide'
-    }
-
-    if (!formData.firstName) {
-      newErrors.firstName = 'Le prénom est requis'
-    }
-
-    if (!formData.lastName) {
-      newErrors.lastName = 'Le nom est requis'
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!validateForm()) return
-
-    setLoading(true)
-
-    try {
-      const url = user ? `/api/users/${user.id}` : '/api/users'
-      const method = user ? 'PATCH' : 'POST'
-
-      const dataToSend = { ...formData }
-      if (!dataToSend.phone) {
-        delete (dataToSend as any).phone
-      }
-
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(dataToSend)
-      })
-
-      const data = await response.json()
-      
-      console.log('📡 Réponse API:', data)
-
-      if (data.success) {
-        // Messages de succès détaillés
-        if (user) {
-          toast.success('✅ Utilisateur modifié avec succès')
-        } else {
-          if (data.emailSent) {
-            toast.success('✅ Utilisateur créé avec succès! Email envoyé avec le mot de passe temporaire.')
-          } else if (data.tempPassword) {
-            // Si l'email n'a pas pu être envoyé, afficher le mot de passe
-            toast.error(
-              <div>
-                <p className="font-bold mb-2">⚠️ Utilisateur créé mais l'email n'a pas pu être envoyé</p>
-                <p className="text-sm">Mot de passe temporaire:</p>
-                <code className="bg-black text-white px-2 py-1 rounded text-sm">{data.tempPassword}</code>
-                <p className="text-xs mt-2">Notez ce mot de passe et transmettez-le à l'utilisateur</p>
-              </div>,
-              { duration: 10000 } // Afficher pendant 10 secondes
-            )
-          } else {
-            toast.success(data.message || '✅ Utilisateur créé avec succès')
-          }
-        }
-        onSuccess()
-      } else {
-        // Messages d'erreur détaillés
-        console.error('❌ Erreur API:', data)
-        
-        if (data.error === 'Un utilisateur avec cet email existe déjà') {
-          toast.error('❌ Cet email est déjà utilisé par un autre utilisateur')
-        } else if (data.details && Array.isArray(data.details)) {
-          // Erreurs de validation Zod
-          const fieldErrors: Record<string, string> = {}
-          data.details.forEach((detail: any) => {
-            fieldErrors[detail.field] = detail.message
-          })
-          setErrors(fieldErrors)
-          toast.error('❌ Veuillez corriger les erreurs dans le formulaire')
-        } else {
-          toast.error(data.error || '❌ Une erreur est survenue lors de la création')
-        }
-      }
-    } catch (error) {
-      console.error('Erreur:', error)
-      toast.error('Une erreur est survenue')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  if (!isOpen) return null
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="fixed inset-0 bg-black bg-opacity-50" onClick={onClose} />
-      <div className="relative bg-white rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <h2 className="text-xl font-bold mb-4">
-            {user ? 'Modifier l\'utilisateur' : 'Nouvel utilisateur'}
-          </h2>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Prénom et Nom */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Prénom</label>
-                <Input
-                  value={formData.firstName}
-                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                  className={errors.firstName ? 'border-red-500' : ''}
-                />
-                {errors.firstName && (
-                  <p className="text-sm text-red-500">{errors.firstName}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Nom</label>
-                <Input
-                  value={formData.lastName}
-                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                  className={errors.lastName ? 'border-red-500' : ''}
-                />
-                {errors.lastName && (
-                  <p className="text-sm text-red-500">{errors.lastName}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Email */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Email</label>
-              <Input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className={errors.email ? 'border-red-500' : ''}
-              />
-              {errors.email && (
-                <p className="text-sm text-red-500">{errors.email}</p>
-              )}
-            </div>
-
-            {/* Téléphone */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Téléphone (optionnel)</label>
-              <Input
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              />
-            </div>
-
-            {/* Rôle et Statut */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Rôle</label>
-                <select
-                  value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value as 'ADMIN' | 'MANAGER' })}
-                  className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-                >
-                  <option value="MANAGER">Manager</option>
-                  <option value="ADMIN">Admin</option>
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Statut</label>
-                <select
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                  className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-                >
-                  <option value="ACTIVE">Actif</option>
-                  <option value="INACTIVE">Inactif</option>
-                  <option value="PENDING">En attente</option>
-                  <option value="SUSPENDED">Suspendu</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Option d'envoi d'email pour nouveau utilisateur */}
-            {!user && (
-              <div className="flex items-center space-x-2 p-3 bg-blue-50 rounded-lg">
-                <input
-                  type="checkbox"
-                  id="sendEmail"
-                  checked={formData.sendEmail}
-                  onChange={(e) => setFormData({ ...formData, sendEmail: e.target.checked })}
-                  className="rounded"
-                />
-                <label htmlFor="sendEmail" className="text-sm">
-                  Envoyer un email de bienvenue avec le mot de passe temporaire
-                </label>
-              </div>
-            )}
-
-            <div className="flex justify-end gap-2 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onClose}
-                disabled={loading}
-              >
-                Annuler
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={loading}
-              >
-                {loading ? 'Chargement...' : (user ? 'Modifier' : 'Créer')}
-              </Button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  )
 }
 
 export default function UsersContent() {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const [roleFilter, setRoleFilter] = useState<string>('all')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [selectedUsers, setSelectedUsers] = useState<string[]>([])
-  const [modalOpen, setModalOpen] = useState(false)
-  const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [showModal, setShowModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [userToDelete, setUserToDelete] = useState<User | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create')
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    role: 'USER' as 'USER' | 'ADMIN' | 'MANAGER'
+  })
 
-  // Charger les utilisateurs
+  // Helper functions for role display
+  const getRoleBadge = (role: string) => {
+    switch (role) {
+      case 'ADMIN': return 'bg-red-100 text-red-700'
+      case 'MANAGER': return 'bg-blue-100 text-blue-700'
+      case 'USER': return 'bg-gray-100 text-gray-700'
+      default: return 'bg-gray-100 text-gray-700'
+    }
+  }
+
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case 'ADMIN': return 'Administrateur'
+      case 'MANAGER': return 'Gestionnaire'
+      case 'USER': return 'Utilisateur'
+      default: return role
+    }
+  }
+
+  // Helper functions for status display
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'ACTIVE': return 'bg-green-100 text-green-700'
+      case 'INACTIVE': return 'bg-red-100 text-red-700'
+      case 'PENDING': return 'bg-yellow-100 text-yellow-700'
+      case 'SUSPENDED': return 'bg-orange-100 text-orange-700'
+      default: return 'bg-gray-100 text-gray-700'
+    }
+  }
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'ACTIVE': return 'Actif'
+      case 'INACTIVE': return 'Inactif'
+      case 'PENDING': return 'En attente'
+      case 'SUSPENDED': return 'Suspendu'
+      default: return status
+    }
+  }
+
   const fetchUsers = async () => {
     try {
       setLoading(true)
-      const params = new URLSearchParams()
-      if (searchTerm) params.append('search', searchTerm)
-      if (roleFilter !== 'all') params.append('role', roleFilter)
-      if (statusFilter !== 'all') params.append('status', statusFilter)
-
-      const response = await fetch(`/api/users?${params}`)
+      const response = await fetch('/api/users')
       const data = await response.json()
 
       if (data.success) {
@@ -356,47 +103,73 @@ export default function UsersContent() {
 
   useEffect(() => {
     fetchUsers()
-  }, [searchTerm, roleFilter, statusFilter])
+  }, [])
 
+  const filteredUsers = (users || []).filter(user =>
+    user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.email.toLowerCase().includes(searchTerm.toLowerCase())
+  )
 
+  const openCreateModal = () => {
+    setModalMode('create')
+    setFormData({
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      role: 'USER'
+    })
+    setShowModal(true)
+  }
 
-  // Changer le statut d'un utilisateur
-  const handleStatusChange = async (userId: string, newStatus: string) => {
+  const openEditModal = (user: User) => {
+    setModalMode('edit')
+    setSelectedUser(user)
+    setFormData({
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      phone: user.phone || '',
+      role: user.role
+    })
+    setShowModal(true)
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
     try {
-      const response = await fetch(`/api/users/${userId}`, {
-        method: 'PATCH',
+      const url = modalMode === 'create' ? '/api/users' : `/api/users/${selectedUser?.id}`
+      const method = modalMode === 'create' ? 'POST' : 'PUT'
+
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus })
+        body: JSON.stringify(formData)
       })
 
       const data = await response.json()
 
       if (data.success) {
-        toast.success('Statut mis à jour avec succès')
+        toast.success(modalMode === 'create' ? 'Utilisateur créé avec succès' : 'Utilisateur modifié avec succès')
         fetchUsers()
+        setShowModal(false)
+        setSelectedUser(null)
       } else {
-        toast.error(data.error || 'Erreur lors de la mise à jour')
+        toast.error(data.error || 'Erreur lors de la sauvegarde')
       }
     } catch (error) {
       console.error('Erreur:', error)
-      toast.error('Erreur lors de la mise à jour')
+      toast.error('Erreur lors de la sauvegarde')
     }
   }
 
-  // Fonction pour éditer un utilisateur
-  const handleEdit = (user: User) => {
-    setEditingUser(user)
-    setModalOpen(true)
-  }
-
-  // Fonction pour supprimer un utilisateur
-  const handleDelete = async (user: User) => {
-    if (!confirm(`Êtes-vous sûr de vouloir supprimer ${user.firstName} ${user.lastName} ?`)) {
-      return
-    }
+  const handleDelete = async () => {
+    if (!selectedUser) return
 
     try {
-      const response = await fetch(`/api/users/${user.id}`, {
+      const response = await fetch(`/api/users/${selectedUser.id}`, {
         method: 'DELETE'
       })
 
@@ -404,21 +177,9 @@ export default function UsersContent() {
 
       if (data.success) {
         toast.success('Utilisateur supprimé avec succès')
-        
-        // Envoyer un email de notification si c'est un admin
-        if (user.role === 'ADMIN') {
-          await fetch('/api/users/notify-deletion', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email: user.email,
-              firstName: user.firstName,
-              lastName: user.lastName
-            })
-          })
-        }
-        
         fetchUsers()
+        setShowDeleteModal(false)
+        setSelectedUser(null)
       } else {
         toast.error(data.error || 'Erreur lors de la suppression')
       }
@@ -428,506 +189,291 @@ export default function UsersContent() {
     }
   }
 
-  // Actions bulk
-  const handleBulkAction = async (action: string) => {
-    if (selectedUsers.length === 0) {
-      toast.error('Aucun utilisateur sélectionné')
-      return
-    }
-
-    try {
-      const response = await fetch('/api/users', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'bulk_status',
-          userIds: selectedUsers,
-          status: action
-        })
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        toast.success(data.message)
-        setSelectedUsers([])
-        fetchUsers()
-      } else {
-        toast.error(data.error || 'Erreur lors de l\'action')
-      }
-    } catch (error) {
-      console.error('Erreur:', error)
-      toast.error('Erreur lors de l\'action')
-    }
-  }
-
-  const getRoleBadge = (role: string) => {
-    const roleConfig = {
-      ADMIN: { label: 'Admin', className: 'bg-purple-100 text-purple-800' },
-      MANAGER: { label: 'Manager', className: 'bg-blue-100 text-blue-800' }
-    }
-    const config = roleConfig[role as keyof typeof roleConfig]
-    return <Badge className={config.className}>{config.label}</Badge>
-  }
-
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      ACTIVE: { label: 'Actif', className: 'bg-green-100 text-green-800' },
-      INACTIVE: { label: 'Inactif', className: 'bg-gray-100 text-gray-800' },
-      PENDING: { label: 'En attente', className: 'bg-yellow-100 text-yellow-800' },
-      SUSPENDED: { label: 'Suspendu', className: 'bg-red-100 text-red-800' }
-    }
-    const config = statusConfig[status as keyof typeof statusConfig]
-    return <Badge className={config.className}>{config.label}</Badge>
-  }
-
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col space-y-4 sm:space-y-0 sm:flex-row sm:justify-between sm:items-center">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Gestion des utilisateurs</h1>
-          <p className="text-sm sm:text-base text-gray-600 mt-1">
-            Gérer les accès au dashboard
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+            <Users className="w-8 h-8" />
+            Gestion des Utilisateurs
+          </h1>
+          <p className="text-gray-600 mt-1">
+            {(users || []).length} utilisateur{(users || []).length > 1 ? 's' : ''} au total
           </p>
         </div>
-        <Button 
-          onClick={() => {
-            setEditingUser(null)
-            setModalOpen(true)
-          }}
-          className="w-full sm:w-auto"
+
+        <button
+          onClick={openCreateModal}
+          className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
         >
-          <Plus className="h-4 w-4 mr-2" />
+          <Plus className="w-4 h-4" />
           Nouvel utilisateur
-        </Button>
+        </button>
       </div>
 
-      {/* Filtres - Mobile first */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="space-y-4">
-            {/* Recherche */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Rechercher par nom ou email..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 w-full"
-              />
-            </div>
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <input
+          type="text"
+          placeholder="Rechercher un utilisateur..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+        />
+      </div>
 
-            {/* Filtres en colonnes sur mobile, en ligne sur desktop */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <select
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
-                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-              >
-                <option value="all">Tous les rôles</option>
-                <option value="ADMIN">Admin</option>
-                <option value="MANAGER">Manager</option>
-              </select>
-
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-              >
-                <option value="all">Tous les statuts</option>
-                <option value="ACTIVE">Actif</option>
-                <option value="INACTIVE">Inactif</option>
-                <option value="PENDING">En attente</option>
-                <option value="SUSPENDED">Suspendu</option>
-              </select>
-
-              {/* Actions en masse - affiché même si aucune sélection avec message */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full relative"
-                    disabled={selectedUsers.length === 0}
-                  >
-                    {selectedUsers.length > 0
-                      ? `Actions (${selectedUsers.length} sélectionné${selectedUsers.length > 1 ? 's' : ''})`
-                      : 'Actions (sélectionnez d\'abord)'
-                    }
-                  </Button>
-                </DropdownMenuTrigger>
-                {selectedUsers.length > 0 && (
-                  <DropdownMenuContent className="w-48">
-                    <DropdownMenuItem
-                      onClick={() => handleBulkAction('ACTIVE')}
-                      className="cursor-pointer"
-                    >
-                      <UserCheck className="h-4 w-4 mr-2" />
-                      Activer
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => handleBulkAction('INACTIVE')}
-                      className="cursor-pointer"
-                    >
-                      <UserX className="h-4 w-4 mr-2" />
-                      Désactiver
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => handleBulkAction('SUSPENDED')}
-                      className="cursor-pointer"
-                    >
-                      <Shield className="h-4 w-4 mr-2" />
-                      Suspendre
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                )}
-              </DropdownMenu>
-            </div>
+      {/* Users Table */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        {loading ? (
+          <div className="p-8 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black mx-auto"></div>
+            <p className="text-gray-500 mt-2">Chargement...</p>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Stats rapides */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <UsersIcon className="h-8 w-8 text-blue-500" />
-              <div>
-                <p className="text-sm text-gray-600">Total</p>
-                <p className="text-xl sm:text-2xl font-bold">{users.length}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <UserCheck className="h-8 w-8 text-green-500" />
-              <div>
-                <p className="text-sm text-gray-600">Actifs</p>
-                <p className="text-xl sm:text-2xl font-bold">
-                  {users.filter(u => u.status === 'ACTIVE').length}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Shield className="h-8 w-8 text-purple-500" />
-              <div>
-                <p className="text-sm text-gray-600">Admins</p>
-                <p className="text-xl sm:text-2xl font-bold">
-                  {users.filter(u => u.role === 'ADMIN').length}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <UsersIcon className="h-8 w-8 text-orange-500" />
-              <div>
-                <p className="text-sm text-gray-600">Managers</p>
-                <p className="text-xl sm:text-2xl font-bold">
-                  {users.filter(u => u.role === 'MANAGER').length}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        ) : filteredUsers.length === 0 ? (
+          <div className="p-8 text-center">
+            <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-500">Aucun utilisateur trouvé</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Utilisateur
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Contact
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Rôle
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Statut
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Inscrit le
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredUsers.map((user) => (
+                  <tr key={user.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 h-10 w-10">
+                          <div className="h-10 w-10 rounded-full bg-black text-white flex items-center justify-center text-sm font-medium">
+                            {user.firstName[0]}{user.lastName[0]}
+                          </div>
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">
+                            {user.firstName} {user.lastName}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {user.role === 'ADMIN' ? 'Administrateur' : user.role === 'MANAGER' ? 'Gestionnaire' : 'Utilisateur'}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900 flex items-center gap-1">
+                        <Mail className="w-3 h-3 text-gray-400" />
+                        {user.email}
+                      </div>
+                      {user.phone && (
+                        <div className="text-sm text-gray-500 flex items-center gap-1">
+                          <Phone className="w-3 h-3 text-gray-400" />
+                          {user.phone}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleBadge(user.role)}`}>
+                        {getRoleLabel(user.role)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadge(user.status)}`}>
+                        {getStatusLabel(user.status)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3 text-gray-400" />
+                        {new Date(user.createdAt).toLocaleDateString('fr-FR')}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => openEditModal(user)}
+                          className="text-black hover:text-gray-600 p-1 rounded"
+                          title="Modifier"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedUser(user)
+                            setShowDeleteModal(true)
+                          }}
+                          className="text-red-600 hover:text-red-800 p-1 rounded"
+                          title="Supprimer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
-      {/* Liste des utilisateurs - Cards sur mobile, table sur desktop */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Liste des utilisateurs</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0 sm:p-6">
-          {loading ? (
-            <div className="text-center py-8">Chargement...</div>
-          ) : users.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              Aucun utilisateur trouvé
+      {/* Modal Create/Edit */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-xl w-full max-w-md"
+          >
+            <div className="p-6 border-b">
+              <h2 className="text-xl font-bold">
+                {modalMode === 'create' ? 'Nouvel utilisateur' : 'Modifier l\'utilisateur'}
+              </h2>
             </div>
-          ) : (
-            <div className="space-y-4 sm:space-y-0">
-              {/* Vue mobile - Cards */}
-              <div className="sm:hidden space-y-4 p-4">
-                {users.map((user) => (
-                  <Card key={user.id} className="relative">
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center space-x-3">
-                          <input
-                            type="checkbox"
-                            checked={selectedUsers.includes(user.id)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedUsers([...selectedUsers, user.id])
-                              } else {
-                                setSelectedUsers(selectedUsers.filter(id => id !== user.id))
-                              }
-                            }}
-                            className="rounded"
-                          />
-                          <div>
-                            <p className="font-semibold">
-                              {user.firstName} {user.lastName}
-                            </p>
-                            <p className="text-sm text-gray-600">{user.email}</p>
-                          </div>
-                        </div>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="relative">
-                              <MoreVertical className="h-4 w-4" />
-                              <span className="sr-only">Actions</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setEditingUser(user)
-                                setModalOpen(true)
-                              }}
-                              className="cursor-pointer"
-                            >
-                              <Edit2 className="h-4 w-4 mr-2" />
-                              Modifier
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => handleStatusChange(user.id, 'ACTIVE')}
-                              disabled={user.status === 'ACTIVE'}
-                              className="cursor-pointer"
-                            >
-                              <UserCheck className="h-4 w-4 mr-2" />
-                              Activer
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleStatusChange(user.id, 'INACTIVE')}
-                              disabled={user.status === 'INACTIVE'}
-                              className="cursor-pointer"
-                            >
-                              <UserX className="h-4 w-4 mr-2" />
-                              Désactiver
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleStatusChange(user.id, 'SUSPENDED')}
-                              disabled={user.status === 'SUSPENDED'}
-                              className="cursor-pointer"
-                            >
-                              <Shield className="h-4 w-4 mr-2" />
-                              Suspendre
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => handleDelete(user)}
-                              className="text-red-600 cursor-pointer"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Supprimer
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
 
-                      <div className="space-y-2">
-                        <div className="flex items-center space-x-2">
-                          {getRoleBadge(user.role)}
-                          {getStatusBadge(user.status)}
-                        </div>
-                        
-                        {user.phone && (
-                          <div className="flex items-center text-sm text-gray-600">
-                            <Phone className="h-3 w-3 mr-1" />
-                            {user.phone}
-                          </div>
-                        )}
-                        
-                        <div className="flex items-center text-sm text-gray-600">
-                          <Calendar className="h-3 w-3 mr-1" />
-                          Créé le {new Date(user.createdAt).toLocaleDateString()}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Prénom *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.firstName}
+                    onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Nom *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.lastName}
+                    onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                  />
+                </div>
               </div>
 
-              {/* Vue desktop - Table */}
-              <div className="hidden sm:block overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50 border-b">
-                    <tr>
-                      <th className="px-6 py-3 text-left">
-                        <input
-                          type="checkbox"
-                          checked={selectedUsers.length === users.length && users.length > 0}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedUsers(users.map(u => u.id))
-                            } else {
-                              setSelectedUsers([])
-                            }
-                          }}
-                          className="rounded"
-                        />
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Utilisateur
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Rôle
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Statut
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Contact
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Créé le
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {users.map((user) => (
-                      <tr key={user.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4">
-                          <input
-                            type="checkbox"
-                            checked={selectedUsers.includes(user.id)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedUsers([...selectedUsers, user.id])
-                              } else {
-                                setSelectedUsers(selectedUsers.filter(id => id !== user.id))
-                              }
-                            }}
-                            className="rounded"
-                          />
-                        </td>
-                        <td className="px-6 py-4">
-                          <div>
-                            <p className="font-medium">
-                              {user.firstName} {user.lastName}
-                            </p>
-                            <p className="text-sm text-gray-600">{user.email}</p>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          {getRoleBadge(user.role)}
-                        </td>
-                        <td className="px-6 py-4">
-                          {getStatusBadge(user.status)}
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm">
-                            <div className="flex items-center">
-                              <Mail className="h-3 w-3 mr-1 text-gray-400" />
-                              {user.email}
-                            </div>
-                            {user.phone && (
-                              <div className="flex items-center mt-1">
-                                <Phone className="h-3 w-3 mr-1 text-gray-400" />
-                                {user.phone}
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-600">
-                          {new Date(user.createdAt).toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="relative">
-                                <MoreVertical className="h-4 w-4" />
-                                <span className="sr-only">Actions</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48">
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setEditingUser(user)
-                                  setModalOpen(true)
-                                }}
-                                className="cursor-pointer"
-                              >
-                                <Edit2 className="h-4 w-4 mr-2" />
-                                Modifier
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => handleStatusChange(user.id, 'ACTIVE')}
-                                disabled={user.status === 'ACTIVE'}
-                                className="cursor-pointer"
-                              >
-                                <UserCheck className="h-4 w-4 mr-2" />
-                                Activer
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleStatusChange(user.id, 'INACTIVE')}
-                                disabled={user.status === 'INACTIVE'}
-                                className="cursor-pointer"
-                              >
-                                <UserX className="h-4 w-4 mr-2" />
-                                Désactiver
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleStatusChange(user.id, 'SUSPENDED')}
-                                disabled={user.status === 'SUSPENDED'}
-                                className="cursor-pointer"
-                              >
-                                <Shield className="h-4 w-4 mr-2" />
-                                Suspendre
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => handleDelete(user)}
-                                className="text-red-600 cursor-pointer"
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Supprimer
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email *
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={formData.email}
+                  onChange={(e) => setFormData({...formData, email: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                />
               </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
-      {/* Modal intégré directement */}
-      {modalOpen && <UserModalIntegrated 
-        isOpen={modalOpen}
-        onClose={() => {
-          setModalOpen(false)
-          setEditingUser(null)
-        }}
-        user={editingUser}
-        onSuccess={() => {
-          setModalOpen(false)
-          setEditingUser(null)
-          fetchUsers()
-        }}
-      />}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Téléphone
+                </label>
+                <input
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Rôle *
+                </label>
+                <select
+                  value={formData.role}
+                  onChange={(e) => setFormData({...formData, role: e.target.value as 'USER' | 'ADMIN'})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                >
+                  <option value="USER">Utilisateur</option>
+                  <option value="ADMIN">Administrateur</option>
+                </select>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800"
+                >
+                  {modalMode === 'create' ? 'Créer' : 'Modifier'}
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Delete Confirmation */}
+      {showDeleteModal && selectedUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-xl w-full max-w-md p-6"
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <AlertCircle className="w-6 h-6 text-red-500" />
+              <h2 className="text-xl font-bold">Confirmer la suppression</h2>
+            </div>
+
+            <p className="text-gray-600 mb-6">
+              Êtes-vous sûr de vouloir supprimer l'utilisateur <strong>{selectedUser.firstName} {selectedUser.lastName}</strong> ?
+              Cette action est irréversible.
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleDelete}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              >
+                Supprimer
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   )
 }

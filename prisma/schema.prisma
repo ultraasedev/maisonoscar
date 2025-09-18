@@ -146,6 +146,7 @@ enum Exposure {
 enum ContractStatus {
   DRAFT
   PENDING
+  SENT
   SIGNED
   ACTIVE
   EXPIRED
@@ -154,6 +155,7 @@ enum ContractStatus {
 
 enum SignerRole {
   TENANT
+  ROOMMATE
   GUARANTOR
   LANDLORD
 }
@@ -186,6 +188,8 @@ model User {
   payments          Payment[]   // ✅ AJOUTÉ : Relation directe avec Payment (utilisée dans le seed)
   auth              Auth?       // ✅ AJOUTÉ : Relation avec l'authentification
   bookingRequests   BookingRequest[] // Dossiers de réservation
+  contractTemplates ContractTemplate[] // Templates de contrat créés
+  adminSignatures   AdminSignature[] // Signatures/tampons admin créés
   
   // Métadonnées
   createdAt         DateTime    @default(now())
@@ -707,6 +711,56 @@ model ContractSignature {
   updatedAt         DateTime      @updatedAt
   
   @@map("contract_signatures")
+}
+
+// Modèle pour les templates de contrat PDF
+model ContractTemplate {
+  id                String        @id @default(auto()) @map("_id") @db.ObjectId
+
+  // Informations du template
+  name              String
+  description       String?
+
+  // PDF data (base64)
+  pdfData           String
+
+  // Configuration
+  isDefault         Boolean       @default(false)
+
+  // Métadonnées
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  // Relations
+  createdById       String        @db.ObjectId
+  createdBy         User          @relation(fields: [createdById], references: [id])
+
+  @@map("contract_templates")
+}
+
+// Modèle pour les signatures/tampons d'administrateur
+model AdminSignature {
+  id                String        @id @default(auto()) @map("_id") @db.ObjectId
+
+  // Informations de la signature
+  name              String
+  description       String?
+
+  // Signature data (base64 image)
+  signatureData     String
+
+  // Configuration
+  isDefault         Boolean       @default(false)
+
+  // Métadonnées
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  // Relations
+  createdById       String?       @db.ObjectId
+  createdBy         User?         @relation(fields: [createdById], references: [id])
+
+  @@map("admin_signatures")
 }
 
 // ✅ NOUVEAU : Configuration juridique et propriétaires

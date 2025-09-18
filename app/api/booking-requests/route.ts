@@ -205,8 +205,8 @@ export async function POST(request: NextRequest) {
       }
     })
     
-    // Si la demande est soumise, envoyer les emails
-    if (validatedData.status === 'SUBMITTED') {
+    // Envoyer les emails pour toute nouvelle demande
+    {
       // Importer les templates
       const { bookingRequestEmail } = await import('@/lib/email-templates')
       
@@ -235,36 +235,38 @@ export async function POST(request: NextRequest) {
 
       // Construire l'info des colocataires pour l'email
       const roommateInfo = roommates && roommates.length > 0
-        ? `<p><strong>Colocataires :</strong> ${roommates.map(rm => `${rm.firstName} ${rm.lastName}`).join(', ')}</p>`
+        ? roommates.map(rm => `${rm.firstName} ${rm.lastName}`).join(', ')
         : ''
 
       // Construire l'info des garants pour l'email
       const guarantorInfo = guarantors && guarantors.length > 0
-        ? `<p><strong>Garants :</strong> ${guarantors.map(g => `${g.firstName} ${g.lastName}`).join(', ')}</p>`
+        ? guarantors.map(g => `${g.firstName} ${g.lastName}`).join(', ')
         : validatedData.hasGuarantor && validatedData.guarantorFirstName
-        ? `<p><strong>Garant :</strong> ${validatedData.guarantorFirstName} ${validatedData.guarantorLastName}</p>`
+        ? `${validatedData.guarantorFirstName} ${validatedData.guarantorLastName}`
         : ''
 
+      // Importer le nouveau template stylisé
+      const { newBookingRequestAdminTemplate } = await import('@/lib/email-templates')
+
       for (const admin of admins) {
-        // Email
+        // Email avec template stylisé
+        const adminEmailHtml = newBookingRequestAdminTemplate({
+          firstName: validatedData.firstName,
+          lastName: validatedData.lastName,
+          email: validatedData.email,
+          phone: validatedData.phone,
+          roomName: room.name,
+          startDate: new Date(validatedData.desiredStartDate).toLocaleDateString('fr-FR'),
+          duration: validatedData.desiredDuration,
+          roommateInfo: roommateInfo || undefined,
+          guarantorInfo: guarantorInfo || undefined,
+          adminDashboardUrl: `${process.env.NEXTAUTH_URL}/admin/prospects`
+        })
+
         await sendEmail(
           admin.email,
           'Nouvelle demande de réservation - Maison Oscar',
-          `
-          <h2>Nouvelle demande de réservation</h2>
-          <p>Une nouvelle demande vient d'être soumise.</p>
-          <br>
-          <p><strong>Candidat principal :</strong> ${validatedData.firstName} ${validatedData.lastName}</p>
-          <p><strong>Email :</strong> ${validatedData.email}</p>
-          <p><strong>Téléphone :</strong> ${validatedData.phone}</p>
-          <p><strong>Chambre demandée :</strong> ${room.name}</p>
-          <p><strong>Date de début :</strong> ${new Date(validatedData.desiredStartDate).toLocaleDateString('fr-FR')}</p>
-          <p><strong>Durée :</strong> ${validatedData.desiredDuration} mois</p>
-          ${roommateInfo}
-          ${guarantorInfo}
-          <br>
-          <p><a href="${process.env.NEXTAUTH_URL}/admin/prospects" style="background: black; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Voir le dossier</a></p>
-          `
+          adminEmailHtml
         )
 
         // WhatsApp si le numéro est configuré
@@ -278,7 +280,7 @@ export async function POST(request: NextRequest) {
         }
       }
     }
-    
+
     return NextResponse.json({
       success: true,
       data: bookingRequest,
@@ -287,12 +289,13 @@ export async function POST(request: NextRequest) {
     
   } catch (error) {
     if (error instanceof z.ZodError) {
+      console.error('Erreur de validation Zod:', JSON.stringify(error.issues, null, 2))
       return NextResponse.json(
         { success: false, error: 'Données invalides', details: error.issues },
         { status: 400 }
       )
     }
-    
+
     console.error('Erreur POST /api/booking-requests:', error)
     return NextResponse.json(
       { success: false, error: 'Erreur lors de la création de la demande' },

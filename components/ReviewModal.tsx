@@ -62,13 +62,13 @@ export default function ReviewModal({ isOpen, onClose }: ReviewModalProps) {
           role: formData.role || 'Résident',
           content: formData.content,
           rating: formData.rating,
-          isActive: false // En attente de validation par l'admin
+          isActive: true // Publication directe
         })
       })
 
       if (response.ok) {
         setSuccess(true)
-        toast.success('Merci pour votre avis ! Il sera publié après validation.')
+        toast.success('Merci pour votre avis ! Il est maintenant publié sur le site.')
         setTimeout(() => {
           onClose()
         }, 2000)
@@ -100,58 +100,59 @@ export default function ReviewModal({ isOpen, onClose }: ReviewModalProps) {
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
+            className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 pointer-events-none"
           >
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg pointer-events-auto overflow-hidden">
+            <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-xs sm:max-w-lg lg:max-w-xl xl:max-w-2xl pointer-events-auto overflow-hidden max-h-[95vh] sm:max-h-[90vh] flex flex-col">
               {success ? (
                 /* Success state */
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="p-8 text-center"
+                  className="p-4 sm:p-6 lg:p-8 text-center"
                 >
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-                    className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6"
+                    className="w-16 h-16 sm:w-20 sm:h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6"
                   >
-                    <Check className="w-10 h-10 text-green-600" />
+                    <Check className="w-8 h-8 sm:w-10 sm:h-10 text-green-600" />
                   </motion.div>
-                  
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">
+
+                  <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
                     Merci pour votre avis !
                   </h3>
                   
                   <p className="text-gray-600">
-                    Votre témoignage sera publié après validation par notre équipe.
+                    Votre témoignage a été publié avec succès sur le site !
                   </p>
                 </motion.div>
               ) : (
                 <>
                   {/* Header */}
-                  <div className="relative bg-black p-6 text-white">
+                  <div className="relative bg-black p-4 sm:p-6 text-white flex-shrink-0">
                     <button
                       onClick={onClose}
-                      className="absolute top-4 right-4 w-8 h-8 bg-white/20 backdrop-blur rounded-full flex items-center justify-center hover:bg-white/30 transition-colors"
+                      className="absolute top-3 right-3 sm:top-4 sm:right-4 w-8 h-8 bg-white/20 backdrop-blur rounded-full flex items-center justify-center hover:bg-white/30 transition-colors"
                     >
-                      <X className="w-5 h-5" />
+                      <X className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
-                    
-                    <h2 className="text-2xl font-bold mb-2">
+
+                    <h2 className="text-xl sm:text-2xl font-bold mb-2 pr-10">
                       Partagez votre expérience
                     </h2>
-                    <p className="text-[#F5F3F0] text-sm">
+                    <p className="text-[#F5F3F0] text-xs sm:text-sm">
                       Votre avis aide les futurs résidents à faire leur choix
                     </p>
                   </div>
 
                   {/* Form */}
-                  <form onSubmit={handleSubmit} className="p-6 space-y-5">
+                  <div className="flex-1 overflow-y-auto">
+                    <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-5">
                     {/* Name */}
                     <div>
-                      <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                        <User className="w-4 h-4" />
+                      <label className="flex items-center gap-2 text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                        <User className="w-3 h-3 sm:w-4 sm:h-4" />
                         Votre nom *
                       </label>
                       <input
@@ -159,7 +160,7 @@ export default function ReviewModal({ isOpen, onClose }: ReviewModalProps) {
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         placeholder="Jean Dupont"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                        className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all text-sm sm:text-base"
                         required
                         disabled={loading}
                       />
@@ -167,8 +168,8 @@ export default function ReviewModal({ isOpen, onClose }: ReviewModalProps) {
 
                     {/* Email */}
                     <div>
-                      <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                        <Mail className="w-4 h-4" />
+                      <label className="flex items-center gap-2 text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                        <Mail className="w-3 h-3 sm:w-4 sm:h-4" />
                         Email *
                       </label>
                       <input
@@ -176,7 +177,7 @@ export default function ReviewModal({ isOpen, onClose }: ReviewModalProps) {
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         placeholder="jean@example.com"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                        className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all text-sm sm:text-base"
                         required
                         disabled={loading}
                       />
@@ -187,13 +188,13 @@ export default function ReviewModal({ isOpen, onClose }: ReviewModalProps) {
 
                     {/* Role */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                         Votre statut
                       </label>
                       <select
                         value={formData.role}
                         onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                        className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all text-sm sm:text-base"
                         disabled={loading}
                       >
                         <option value="">Sélectionnez...</option>
@@ -207,20 +208,20 @@ export default function ReviewModal({ isOpen, onClose }: ReviewModalProps) {
 
                     {/* Rating */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">
                         Votre note
                       </label>
-                      <div className="flex gap-2">
+                      <div className="flex gap-1 sm:gap-2">
                         {[1, 2, 3, 4, 5].map((star) => (
                           <button
                             key={star}
                             type="button"
                             onClick={() => setFormData({ ...formData, rating: star })}
                             disabled={loading}
-                            className="transition-all hover:scale-110 disabled:opacity-50"
+                            className="transition-all hover:scale-110 disabled:opacity-50 p-1"
                           >
                             <Star
-                              className={`w-8 h-8 ${
+                              className={`w-6 h-6 sm:w-8 sm:h-8 ${
                                 star <= formData.rating
                                   ? 'text-yellow-400 fill-current'
                                   : 'text-gray-300'
@@ -233,16 +234,16 @@ export default function ReviewModal({ isOpen, onClose }: ReviewModalProps) {
 
                     {/* Content */}
                     <div>
-                      <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                        <MessageSquare className="w-4 h-4" />
+                      <label className="flex items-center gap-2 text-xs sm:text-sm font-medium text-gray-700 mb-2">
+                        <MessageSquare className="w-3 h-3 sm:w-4 sm:h-4" />
                         Votre avis * <span className="text-xs text-gray-500">(min. 20 caractères)</span>
                       </label>
                       <textarea
                         value={formData.content}
                         onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                         placeholder="Partagez votre expérience à la Maison Oscar..."
-                        rows={4}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-black focus:border-transparent transition-all resize-none"
+                        rows={3}
+                        className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-black focus:border-transparent transition-all resize-none text-sm sm:text-base"
                         required
                         minLength={20}
                         disabled={loading}
@@ -253,37 +254,40 @@ export default function ReviewModal({ isOpen, onClose }: ReviewModalProps) {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex gap-3 pt-2">
+                    <div className="flex gap-2 sm:gap-3 pt-2">
                       <button
                         type="button"
                         onClick={onClose}
                         disabled={loading}
-                        className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
+                        className="flex-1 px-4 py-2 sm:px-6 sm:py-3 border border-gray-300 text-gray-700 rounded-lg sm:rounded-xl font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 text-sm sm:text-base"
                       >
                         Annuler
                       </button>
-                      
+
                       <motion.button
                         type="submit"
                         disabled={loading}
                         whileHover={{ scale: loading ? 1 : 1.02 }}
                         whileTap={{ scale: loading ? 1 : 0.98 }}
-                        className="flex-1 px-6 py-3 bg-black text-white rounded-xl font-medium hover:bg-gray-800 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                        className="flex-1 px-4 py-2 sm:px-6 sm:py-3 bg-black text-white rounded-lg sm:rounded-xl font-medium hover:bg-gray-800 transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-sm sm:text-base"
                       >
                         {loading ? (
                           <>
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                            Envoi...
+                            <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+                            <span className="hidden sm:inline">Envoi...</span>
+                            <span className="sm:hidden">...</span>
                           </>
                         ) : (
                           <>
-                            <Send className="w-5 h-5" />
-                            Publier mon avis
+                            <Send className="w-4 h-4 sm:w-5 sm:h-5" />
+                            <span className="hidden sm:inline">Publier mon avis</span>
+                            <span className="sm:hidden">Publier</span>
                           </>
                         )}
                       </motion.button>
                     </div>
                   </form>
+                  </div>
                 </>
               )}
             </div>

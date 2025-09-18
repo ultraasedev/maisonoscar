@@ -13,7 +13,7 @@ export const baseEmailTemplate = (content: {
 }) => {
   const {
     preheader = '',
-    headerBgColor = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    headerBgColor = 'linear-gradient(135deg, #000000 0%, #1f2937 100%)',
     headerIcon = '🏡',
     headerTitle,
     headerSubtitle = '',
@@ -40,29 +40,83 @@ export const baseEmailTemplate = (content: {
       </noscript>
       <![endif]-->
       <style>
+        /* Base styles */
+        .maison-oscar-primary { background: #000000; color: #F5F3F0; }
+        .maison-oscar-secondary { background: #F5F3F0; color: #000000; }
+        .maison-oscar-accent { background: linear-gradient(135deg, #000000 0%, #1f2937 100%); }
+
+        /* Mobile responsiveness */
         @media only screen and (max-width: 600px) {
-          .container { width: 100% !important; }
-          .content { padding: 20px !important; }
-          .header { padding: 30px 20px !important; }
-          .button { width: 100% !important; text-align: center !important; }
-          .button a { display: block !important; padding: 15px !important; }
-          h1 { font-size: 24px !important; }
-          h2 { font-size: 20px !important; }
-          h3 { font-size: 18px !important; }
+          .container {
+            width: 100% !important;
+            margin: 10px auto !important;
+            border-radius: 12px !important;
+          }
+          .content {
+            padding: 20px !important;
+          }
+          .header {
+            padding: 30px 20px !important;
+            border-radius: 12px 12px 0 0 !important;
+          }
+          .button {
+            width: 100% !important;
+            text-align: center !important;
+          }
+          .button a {
+            display: block !important;
+            padding: 15px 20px !important;
+            font-size: 16px !important;
+          }
+          h1 {
+            font-size: 24px !important;
+            line-height: 1.3 !important;
+          }
+          h2 {
+            font-size: 20px !important;
+            line-height: 1.4 !important;
+          }
+          h3 {
+            font-size: 18px !important;
+            line-height: 1.4 !important;
+          }
+          .data-table {
+            font-size: 13px !important;
+          }
+          .icon-circle {
+            width: 60px !important;
+            height: 60px !important;
+            font-size: 32px !important;
+            line-height: 60px !important;
+          }
+          .footer-links {
+            flex-direction: column !important;
+            gap: 10px !important;
+          }
+        }
+
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+          .email-body {
+            background: #1a1a1a !important;
+          }
+          .email-container {
+            background: #2d2d2d !important;
+          }
         }
       </style>
     </head>
-    <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: #f0f2f5; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%;">
+    <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: #F5F3F0; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%;">
       
       <!-- Preheader Text -->
       ${preheader ? `
-      <div style="display: none; font-size: 1px; color: #f0f2f5; line-height: 1px; font-family: Arial, sans-serif; max-height: 0px; max-width: 0px; opacity: 0; overflow: hidden;">
+      <div style="display: none; font-size: 1px; color: #F5F3F0; line-height: 1px; font-family: Arial, sans-serif; max-height: 0px; max-width: 0px; opacity: 0; overflow: hidden;">
         ${preheader}
       </div>
       ` : ''}
       
       <!-- Email Wrapper -->
-      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #f0f2f5; padding: 20px 0;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: #F5F3F0; padding: 20px 0;">
         <tr>
           <td align="center">
             
@@ -76,15 +130,15 @@ export const baseEmailTemplate = (content: {
                     <tr>
                       <td align="center">
                         <!-- Icon Circle -->
-                        <div style="width: 80px; height: 80px; background: rgba(255, 255, 255, 0.2); border-radius: 50%; margin: 0 auto 20px; display: inline-block; line-height: 80px; font-size: 40px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
+                        <div style="width: 80px; height: 80px; background: rgba(245, 243, 240, 0.2); border-radius: 50%; margin: 0 auto 20px; display: inline-block; line-height: 80px; font-size: 40px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
                           ${headerIcon}
                         </div>
                         <!-- Title -->
-                        <h1 style="color: white; margin: 0 0 10px; font-size: 28px; font-weight: 700; text-align: center;">
+                        <h1 style="color: #F5F3F0; margin: 0 0 10px; font-size: 28px; font-weight: 700; text-align: center;">
                           ${headerTitle}
                         </h1>
                         ${headerSubtitle ? `
-                        <p style="color: rgba(255, 255, 255, 0.9); margin: 0; font-size: 16px; text-align: center;">
+                        <p style="color: rgba(245, 243, 240, 0.9); margin: 0; font-size: 16px; text-align: center;">
                           ${headerSubtitle}
                         </p>
                         ` : ''}
@@ -103,20 +157,20 @@ export const baseEmailTemplate = (content: {
               
               <!-- Footer -->
               <tr>
-                <td style="background: #f8f9fa; padding: 30px; border-top: 1px solid #e5e7eb;">
+                <td style="background: rgba(245, 243, 240, 0.5); padding: 30px; border-top: 1px solid rgba(0, 0, 0, 0.1);">
                   <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                     <tr>
                       <td align="center">
                         ${footerContent || `
-                        <p style="color: #6b7280; font-size: 14px; margin: 0 0 10px;">
+                        <p style="color: #000000; font-size: 14px; margin: 0 0 10px; font-weight: 500;">
                           Besoin d'aide? Contactez-nous
                         </p>
                         <p style="margin: 0 0 15px;">
-                          <a href="mailto:contact@maisonoscar.fr" style="color: #667eea; text-decoration: none; font-weight: 500;">
+                          <a href="mailto:contact@maisonoscar.fr" style="color: #000000; text-decoration: none; font-weight: 600;">
                             contact@maisonoscar.fr
                           </a>
-                          <span style="color: #9ca3af; margin: 0 10px;">|</span>
-                          <a href="tel:0612345678" style="color: #667eea; text-decoration: none; font-weight: 500;">
+                          <span style="color: rgba(0, 0, 0, 0.6); margin: 0 10px;">|</span>
+                          <a href="tel:0612345678" style="color: #000000; text-decoration: none; font-weight: 600;">
                             06 12 34 56 78
                           </a>
                         </p>
@@ -134,10 +188,10 @@ export const baseEmailTemplate = (content: {
                           </a>
                         </div>
                         <!-- Copyright -->
-                        <p style="color: #9ca3af; font-size: 12px; margin: 15px 0 0;">
+                        <p style="color: rgba(0, 0, 0, 0.6); font-size: 12px; margin: 15px 0 0;">
                           © ${new Date().getFullYear()} ${process.env.SITE_NAME || 'Maison Oscar'}
                         </p>
-                        <p style="color: #9ca3af; font-size: 12px; margin: 5px 0 0;">
+                        <p style="color: rgba(0, 0, 0, 0.6); font-size: 12px; margin: 5px 0 0;">
                           Tous droits réservés
                         </p>
                       </td>
@@ -166,7 +220,7 @@ export const emailComponents = {
     <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 30px auto;">
       <tr>
         <td class="button">
-          <a href="${url}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);">
+          <a href="${url}" style="display: inline-block; background: #000000; color: #F5F3F0; padding: 14px 32px; text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); transition: all 0.3s ease;">
             ${text}
           </a>
         </td>
@@ -179,7 +233,7 @@ export const emailComponents = {
     <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 20px auto;">
       <tr>
         <td class="button">
-          <a href="${url}" style="display: inline-block; background: white; color: #667eea; padding: 12px 28px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 15px; border: 2px solid #667eea;">
+          <a href="${url}" style="display: inline-block; background: #F5F3F0; color: #000000; padding: 12px 28px; text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 15px; border: 2px solid #000000;">
             ${text}
           </a>
         </td>
@@ -188,12 +242,12 @@ export const emailComponents = {
   `,
   
   // Card d'information
-  infoCard: (title: string, content: string, bgColor = '#f8f9fa') => `
-    <div style="background: ${bgColor}; border-radius: 12px; padding: 24px; margin: 20px 0;">
-      <h3 style="color: #111827; margin: 0 0 12px; font-size: 18px; font-weight: 600;">
+  infoCard: (title: string, content: string, bgColor = 'rgba(245, 243, 240, 0.6)') => `
+    <div style="background: ${bgColor}; border-radius: 12px; padding: 24px; margin: 20px 0; border: 1px solid rgba(0, 0, 0, 0.1);">
+      <h3 style="color: #000000; margin: 0 0 12px; font-size: 18px; font-weight: 600;">
         ${title}
       </h3>
-      <div style="color: #4b5563; line-height: 1.6;">
+      <div style="color: rgba(0, 0, 0, 0.8); line-height: 1.6;">
         ${content}
       </div>
     </div>
@@ -202,7 +256,7 @@ export const emailComponents = {
   // Alert box
   alertBox: (message: string, type: 'info' | 'warning' | 'success' | 'error' = 'info') => {
     const styles = {
-      info: { bg: '#eff6ff', border: '#3b82f6', color: '#1e40af', icon: 'ℹ️' },
+      info: { bg: 'rgba(245, 243, 240, 0.8)', border: '#000000', color: '#000000', icon: 'ℹ️' },
       warning: { bg: '#fef3c7', border: '#f59e0b', color: '#92400e', icon: '⚠️' },
       success: { bg: '#f0fdf4', border: '#22c55e', color: '#166534', icon: '✅' },
       error: { bg: '#fef2f2', border: '#ef4444', color: '#991b1b', icon: '❌' }
@@ -225,9 +279,9 @@ export const emailComponents = {
   iconList: (items: Array<{ icon: string; text: string }>) => `
     <ul style="list-style: none; padding: 0; margin: 20px 0;">
       ${items.map(item => `
-        <li style="display: flex; align-items: center; margin: 12px 0;">
+        <li style="display: flex; align-items: center; margin: 12px 0; padding: 8px 0;">
           <span style="font-size: 20px; margin-right: 12px;">${item.icon}</span>
-          <span style="color: #4b5563; line-height: 1.5;">${item.text}</span>
+          <span style="color: rgba(0, 0, 0, 0.8); line-height: 1.5; font-weight: 400;">${item.text}</span>
         </li>
       `).join('')}
     </ul>
@@ -235,13 +289,13 @@ export const emailComponents = {
   
   // Tableau de données
   dataTable: (rows: Array<{ label: string; value: string; highlight?: boolean }>) => `
-    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 20px 0;">
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 20px 0; border-radius: 8px; overflow: hidden; border: 1px solid rgba(0, 0, 0, 0.1);">
       ${rows.map(row => `
         <tr>
-          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; color: #6b7280; font-size: 14px;">
+          <td style="padding: 12px 16px; border-bottom: 1px solid rgba(0, 0, 0, 0.1); color: rgba(0, 0, 0, 0.7); font-size: 14px; background: rgba(245, 243, 240, 0.3);">
             ${row.label}
           </td>
-          <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: ${row.highlight ? '600' : '500'}; color: ${row.highlight ? '#667eea' : '#111827'}; font-size: ${row.highlight ? '16px' : '14px'};">
+          <td style="padding: 12px 16px; border-bottom: 1px solid rgba(0, 0, 0, 0.1); text-align: right; font-weight: ${row.highlight ? '700' : '500'}; color: ${row.highlight ? '#000000' : 'rgba(0, 0, 0, 0.9)'}; font-size: ${row.highlight ? '16px' : '14px'}; background: white;">
             ${row.value}
           </td>
         </tr>
@@ -254,11 +308,11 @@ export const emailComponents = {
     <div style="margin: 30px 0;">
       ${steps.map((step, index) => `
         <div style="display: flex; align-items: center; margin: 16px 0;">
-          <div style="width: 32px; height: 32px; border-radius: 50%; background: ${step.completed ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : '#e5e7eb'}; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0;">
+          <div style="width: 32px; height: 32px; border-radius: 50%; background: ${step.completed ? '#000000' : 'rgba(245, 243, 240, 0.8)'}; color: ${step.completed ? '#F5F3F0' : 'rgba(0, 0, 0, 0.6)'}; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; border: 2px solid ${step.completed ? '#000000' : 'rgba(0, 0, 0, 0.2)'};">
             ${step.completed ? '✓' : index + 1}
           </div>
           <div style="margin-left: 16px;">
-            <p style="margin: 0; color: ${step.completed ? '#111827' : '#9ca3af'}; font-weight: ${step.completed ? '500' : '400'};">
+            <p style="margin: 0; color: ${step.completed ? '#000000' : 'rgba(0, 0, 0, 0.6)'}; font-weight: ${step.completed ? '600' : '400'};">
               ${step.title}
             </p>
           </div>
@@ -269,7 +323,7 @@ export const emailComponents = {
   
   // Divider
   divider: () => `
-    <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+    <hr style="border: 0; border-top: 1px solid rgba(0, 0, 0, 0.1); margin: 30px 0;">
   `
 }
 
@@ -280,11 +334,11 @@ export const welcomeEmailTemplate = (data: {
   tempPassword: string
 }) => {
   const bodyContent = `
-    <h2 style="color: #111827; margin: 0 0 20px; font-size: 24px;">
+    <h2 style="color: #000000; margin: 0 0 20px; font-size: 24px; font-weight: 600;">
       Bienvenue ${data.firstName} ! 👋
     </h2>
-    
-    <p style="color: #4b5563; line-height: 1.6; margin: 0 0 20px;">
+
+    <p style="color: rgba(0, 0, 0, 0.8); line-height: 1.6; margin: 0 0 20px;">
       Votre compte administrateur a été créé avec succès. Vous pouvez maintenant accéder au dashboard de Maison Oscar pour gérer les réservations, les paiements et bien plus encore.
     </p>
     
@@ -348,7 +402,7 @@ export const contactNotificationTemplate = (data: {
       </span>
     </div>
     
-    <h2 style="color: #111827; margin: 0 0 20px; font-size: 22px;">
+    <h2 style="color: #000000; margin: 0 0 20px; font-size: 22px; font-weight: 600;">
       Nouveau message de ${data.firstName} ${data.lastName}
     </h2>
     
@@ -389,11 +443,11 @@ export const latePaymentReminderTemplate = (data: {
   daysLate: number
 }) => {
   const bodyContent = `
-    <h2 style="color: #111827; margin: 0 0 20px; font-size: 24px;">
+    <h2 style="color: #000000; margin: 0 0 20px; font-size: 24px; font-weight: 600;">
       Bonjour ${data.tenantName},
     </h2>
-    
-    <p style="color: #4b5563; line-height: 1.6; margin: 0 0 20px;">
+
+    <p style="color: rgba(0, 0, 0, 0.8); line-height: 1.6; margin: 0 0 20px;">
       Nous vous rappelons que votre loyer n'a pas encore été réglé. Pour maintenir votre réservation active, merci de procéder au paiement dans les plus brefs délais.
     </p>
     
@@ -446,11 +500,11 @@ export const bookingConfirmationTemplate = (data: {
       </div>
     </div>
     
-    <h2 style="color: #111827; margin: 0 0 20px; font-size: 24px;">
+    <h2 style="color: #000000; margin: 0 0 20px; font-size: 24px; font-weight: 600;">
       Félicitations ${data.tenantName} ! 🎉
     </h2>
-    
-    <p style="color: #4b5563; line-height: 1.6; margin: 0 0 30px;">
+
+    <p style="color: rgba(0, 0, 0, 0.8); line-height: 1.6; margin: 0 0 30px;">
       Votre réservation a été confirmée avec succès. Nous sommes ravis de vous accueillir prochainement à la Maison Oscar !
     </p>
     
@@ -503,12 +557,12 @@ export const bookingRequestEmail = (data: {
 }) => {
   const siteName = process.env.SITE_NAME || 'Maison Oscar'
   const bodyContent = `
-    <h2 style="color: #111827; margin: 0 0 20px; font-size: 24px;">
+    <h2 style="color: #000000; margin: 0 0 20px; font-size: 24px; font-weight: 600;">
       Bonjour ${data.firstName} ${data.lastName} ! 👋
     </h2>
-    
-    <p style="color: #4b5563; line-height: 1.6; margin: 0 0 30px;">
-      Nous avons bien reçu votre demande de réservation pour la chambre <strong>${data.roomName}</strong> 
+
+    <p style="color: rgba(0, 0, 0, 0.8); line-height: 1.6; margin: 0 0 30px;">
+      Nous avons bien reçu votre demande de réservation pour la chambre <strong>${data.roomName}</strong>
       à partir du <strong>${data.startDate}</strong> pour une durée de <strong>${data.duration} mois</strong>.
     </p>
     
@@ -523,7 +577,7 @@ export const bookingRequestEmail = (data: {
       { title: 'Décision', completed: false }
     ])}
     
-    <h3 style="color: #111827; margin: 30px 0 15px; font-size: 18px;">
+    <h3 style="color: #000000; margin: 30px 0 15px; font-size: 18px; font-weight: 600;">
       Prochaines étapes :
     </h3>
     
@@ -563,12 +617,12 @@ export const passwordResetTemplate = (data: {
       </div>
     </div>
     
-    <h2 style="color: #111827; margin: 0 0 20px; font-size: 24px;">
+    <h2 style="color: #000000; margin: 0 0 20px; font-size: 24px; font-weight: 600;">
       Bonjour ${data.firstName} ! 👋
     </h2>
-    
-    <p style="color: #4b5563; line-height: 1.6; margin: 0 0 30px;">
-      Vous avez demandé la réinitialisation de votre mot de passe pour votre compte ${siteName}. 
+
+    <p style="color: rgba(0, 0, 0, 0.8); line-height: 1.6; margin: 0 0 30px;">
+      Vous avez demandé la réinitialisation de votre mot de passe pour votre compte ${siteName}.
       Cliquez sur le bouton ci-dessous pour créer un nouveau mot de passe sécurisé.
     </p>
     
@@ -589,10 +643,10 @@ export const passwordResetTemplate = (data: {
     )}
     
     <div style="margin-top: 30px; padding: 20px; background: #f9fafb; border-radius: 12px;">
-      <h3 style="color: #111827; margin: 0 0 12px; font-size: 16px; font-weight: 600;">
+      <h3 style="color: #000000; margin: 0 0 12px; font-size: 16px; font-weight: 600;">
         🔒 Conseils de sécurité
       </h3>
-      <ul style="color: #4b5563; margin: 0; padding-left: 20px; line-height: 1.6;">
+      <ul style="color: rgba(0, 0, 0, 0.8); margin: 0; padding-left: 20px; line-height: 1.6;">
         <li>Utilisez au moins 8 caractères</li>
         <li>Mélangez majuscules, minuscules et chiffres</li>
         <li>Évitez les informations personnelles</li>
@@ -626,6 +680,127 @@ export const passwordResetTemplate = (data: {
     headerIcon: '🔐',
     headerTitle: 'Réinitialisation de mot de passe',
     headerSubtitle: siteName,
+    bodyContent
+  })
+}
+
+// Template pour réponse à un message de contact
+export const contactResponseTemplate = (data: {
+  firstName: string
+  lastName: string
+  subject: string
+  response: string
+}) => {
+  const bodyContent = `
+    <h2 style="color: #000000; margin: 0 0 20px; font-size: 22px; font-weight: 600;">
+      Bonjour ${data.firstName} ${data.lastName},
+    </h2>
+
+    <p style="color: rgba(0, 0, 0, 0.8); line-height: 1.6; margin: 0 0 20px;">
+      Nous avons le plaisir de vous répondre concernant votre message: <strong>"${data.subject}"</strong>
+    </p>
+
+    ${emailComponents.infoCard(
+      '💬 Notre réponse',
+      `<p style="margin: 0; white-space: pre-wrap;">${data.response}</p>`,
+      'white'
+    )}
+
+    <p style="color: rgba(0, 0, 0, 0.8); line-height: 1.6; margin: 20px 0;">
+      Si vous avez d'autres questions, n'hésitez pas à nous contacter à nouveau.
+    </p>
+
+    ${emailComponents.primaryButton('Nous recontacter', 'mailto:contact@maisonoscar.fr')}
+  `
+
+  return baseEmailTemplate({
+    preheader: `Réponse à votre message: ${data.subject}`,
+    headerIcon: '💬',
+    headerTitle: 'Réponse à votre message',
+    headerSubtitle: 'Notre équipe vous répond',
+    bodyContent
+  })
+}
+
+// Template pour nouvelle demande de réservation (admins)
+export const newBookingRequestAdminTemplate = (data: {
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
+  roomName: string
+  startDate: string
+  duration: number
+  roommateInfo?: string
+  guarantorInfo?: string
+  adminDashboardUrl: string
+}) => {
+  const bodyContent = `
+    <div style="text-align: center; margin-bottom: 30px;">
+      <span style="background: #22c55e; color: white; padding: 8px 20px; border-radius: 50px; font-size: 14px; font-weight: 600;">
+        🏠 Nouvelle demande de réservation
+      </span>
+    </div>
+
+    <h2 style="color: #000000; margin: 0 0 20px; font-size: 24px; font-weight: 600;">
+      Une nouvelle demande vient d'être soumise
+    </h2>
+
+    <p style="color: rgba(0, 0, 0, 0.8); line-height: 1.6; margin: 0 0 30px;">
+      Voici les détails de la nouvelle demande de réservation qui nécessite votre attention.
+    </p>
+
+    ${emailComponents.dataTable([
+      { label: 'Candidat principal', value: `${data.firstName} ${data.lastName}` },
+      { label: 'Email', value: data.email },
+      { label: 'Téléphone', value: data.phone },
+      { label: 'Chambre demandée', value: data.roomName, highlight: true },
+      { label: 'Date de début souhaitée', value: data.startDate },
+      { label: 'Durée', value: `${data.duration} mois` }
+    ])}
+
+    ${data.roommateInfo || data.guarantorInfo ? `
+      ${emailComponents.alertBox(
+        'Informations complémentaires',
+        'info'
+      )}
+
+      <div style="margin: 20px 0;">
+        ${data.roommateInfo ? `
+          <div style="margin-bottom: 15px;">
+            <strong style="color: #000000;">Colocataires :</strong>
+            <div style="color: rgba(0, 0, 0, 0.8);">${data.roommateInfo}</div>
+          </div>
+        ` : ''}
+
+        ${data.guarantorInfo ? `
+          <div>
+            <strong style="color: #000000;">Garants :</strong>
+            <div style="color: rgba(0, 0, 0, 0.8);">${data.guarantorInfo}</div>
+          </div>
+        ` : ''}
+      </div>
+    ` : ''}
+
+    <p style="color: rgba(0, 0, 0, 0.8); line-height: 1.6; margin: 20px 0;">
+      Vous pouvez consulter le dossier complet et traiter cette demande depuis votre dashboard administrateur.
+    </p>
+
+    ${emailComponents.primaryButton('Voir le dossier complet', data.adminDashboardUrl)}
+
+    ${emailComponents.progressSteps([
+      { title: 'Demande soumise', completed: true },
+      { title: 'Examen du dossier', completed: false },
+      { title: 'Validation des documents', completed: false },
+      { title: 'Génération du contrat', completed: false }
+    ])}
+  `
+
+  return baseEmailTemplate({
+    preheader: `Nouvelle demande de ${data.firstName} ${data.lastName} pour ${data.roomName}`,
+    headerIcon: '🏡',
+    headerTitle: 'Nouvelle demande de réservation',
+    headerSubtitle: 'Traitement requis dans votre dashboard',
     bodyContent
   })
 }

@@ -1,12 +1,33 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { 
+import {
   FileText, Download, Eye, X, Loader2, AlertCircle,
   Image as ImageIcon, FileIcon, ChevronLeft, ChevronRight
 } from 'lucide-react'
 import { toast } from 'sonner'
+
+// Fonction pour traduire les noms de documents techniques en français
+const getDocumentLabel = (key: string): string => {
+  const labels: Record<string, string> = {
+    'idCard': 'Pièce d\'identité',
+    'currentAddressProof': 'Justificatif de domicile',
+    'taxNoticeN1': 'Avis d\'imposition N-1',
+    'taxNoticeN2': 'Avis d\'imposition N-2',
+    'payslips': 'Fiches de paie',
+    'workContract': 'Contrat de travail',
+    'schoolCertificate': 'Certificat de scolarité',
+    'apprenticeshipContract': 'Contrat d\'apprentissage',
+    'accountingReport': 'Bilan comptable',
+    'incomeProof': 'Justificatif de revenus',
+    'visaleAttestation': 'Attestation Visale',
+    'kbis': 'Extrait KBIS',
+    'addressProof': 'Justificatif d\'adresse',
+    'commitmentLetter': 'Lettre d\'engagement'
+  }
+  return labels[key] || key.replace(/([A-Z])/g, ' $1').trim()
+}
 
 interface DocumentViewerProps {
   documents: any
@@ -19,16 +40,51 @@ export default function DocumentViewer({ documents, isOpen, onClose }: DocumentV
   const [currentIndex, setCurrentIndex] = useState(0)
   const [loading, setLoading] = useState(false)
 
-  if (!documents || Object.keys(documents).length === 0) {
-    return null
+  // Fonction pour aplatir la structure de documents
+  const flattenDocuments = (docs: any): Array<{key: string, url: string, name: string, type: string}> => {
+    const flattened: Array<{key: string, url: string, name: string, type: string}> = []
+
+    const processValue = (value: any, keyPrefix = '') => {
+      if (typeof value === 'string' && value.startsWith('/')) {
+        // C'est une URL de document
+        const name = getDocumentLabel(keyPrefix)
+        flattened.push({
+          key: keyPrefix,
+          url: value,
+          name: name,
+          type: value.includes('.pdf') ? 'pdf' : 'image'
+        })
+      } else if (Array.isArray(value)) {
+        // C'est un tableau de documents (ex: fiches de paie)
+        value.forEach((item, index) => {
+          if (typeof item === 'string' && item.startsWith('/')) {
+            const name = `${getDocumentLabel(keyPrefix)} ${index + 1}`
+            flattened.push({
+              key: `${keyPrefix}_${index}`,
+              url: item,
+              name: name,
+              type: item.includes('.pdf') ? 'pdf' : 'image'
+            })
+          }
+        })
+      } else if (typeof value === 'object' && value !== null) {
+        // C'est un objet, on continue récursivement
+        Object.entries(value).forEach(([subKey, subValue]) => {
+          const newKeyPrefix = keyPrefix ? `${keyPrefix} ${subKey}` : subKey
+          processValue(subValue, newKeyPrefix)
+        })
+      }
+    }
+
+    Object.entries(docs).forEach(([key, value]) => {
+      processValue(value, key)
+    })
+
+    return flattened
   }
 
-  const docList = Object.entries(documents).filter(([key, value]) => value).map(([key, value]) => ({
-    key,
-    url: value as string,
-    name: key.replace(/([A-Z])/g, ' $1').trim(),
-    type: (value as string).includes('.pdf') ? 'pdf' : 'image'
-  }))
+  // Calculer la liste des documents une seule fois
+  const docList = documents && Object.keys(documents).length > 0 ? flattenDocuments(documents) : []
 
   const handleDownload = async (url: string, name: string) => {
     try {
@@ -58,15 +114,51 @@ export default function DocumentViewer({ documents, isOpen, onClose }: DocumentV
   }
 
   const nextDoc = () => {
+    if (docList.length === 0) return
     const newIndex = (currentIndex + 1) % docList.length
-    setCurrentIndex(newIndex)
-    setCurrentDoc(docList[newIndex].url)
+    if (docList[newIndex]) {
+      setCurrentIndex(newIndex)
+      setCurrentDoc(docList[newIndex].url)
+    }
   }
 
   const prevDoc = () => {
+    if (docList.length === 0) return
     const newIndex = (currentIndex - 1 + docList.length) % docList.length
-    setCurrentIndex(newIndex)
-    setCurrentDoc(docList[newIndex].url)
+    if (docList[newIndex]) {
+      setCurrentIndex(newIndex)
+      setCurrentDoc(docList[newIndex].url)
+    }
+  }
+
+  // Navigation au clavier - TOUJOURS appelé, pas conditionnellement
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (!isOpen || !currentDoc) return
+
+      switch (e.key) {
+        case 'ArrowLeft':
+          e.preventDefault()
+          prevDoc()
+          break
+        case 'ArrowRight':
+          e.preventDefault()
+          nextDoc()
+          break
+        case 'Escape':
+          e.preventDefault()
+          onClose()
+          break
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyPress)
+    return () => document.removeEventListener('keydown', handleKeyPress)
+  }, [isOpen, currentDoc, currentIndex])
+
+  // Vérification conditionnelle APRÈS tous les hooks
+  if (!documents || Object.keys(documents).length === 0) {
+    return null
   }
 
   return (
@@ -178,6 +270,13 @@ export default function DocumentViewer({ documents, isOpen, onClose }: DocumentV
                         </>
                       )}
                     </div>
+                  </div>
+
+                  {/* Document title */}
+                  <div className="mb-4 text-center">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {docList[currentIndex]?.name}
+                    </h3>
                   </div>
 
                   {/* Document viewer */}

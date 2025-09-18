@@ -25,7 +25,7 @@ interface Booking {
     price: number
   }
   startDate: string
-  endDate: string
+  endDate: string | null
   totalAmount: number
   status: 'PENDING' | 'CONFIRMED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED'
   paymentStatus: 'PENDING' | 'PARTIAL' | 'PAID'
@@ -308,7 +308,10 @@ export default function BookingsContent() {
                         <div className="text-sm">
                           <p>{new Date(booking.startDate).toLocaleDateString('fr-FR')}</p>
                           <p className="text-gray-600">
-                            au {new Date(booking.endDate).toLocaleDateString('fr-FR')}
+                            {booking.endDate
+                              ? `au ${new Date(booking.endDate).toLocaleDateString('fr-FR')}`
+                              : `au ${new Date(new Date(booking.startDate).setMonth(new Date(booking.startDate).getMonth() + 12)).toLocaleDateString('fr-FR')} (12 mois)`
+                            }
                           </p>
                         </div>
                       </td>

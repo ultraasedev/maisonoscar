@@ -7,7 +7,8 @@ import {
   contactNotificationTemplate,
   latePaymentReminderTemplate,
   bookingConfirmationTemplate,
-  passwordResetTemplate
+  passwordResetTemplate,
+  contactResponseTemplate
 } from './email-templates'
 
 // Vérification de la configuration
@@ -34,12 +35,17 @@ const checkEmailConfig = () => {
   return true
 }
 
-// Configuration du transporteur SMTP (Gmail)
+// Configuration du transporteur SMTP (Hostinger)
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: process.env.SMTP_HOST || 'smtp.hostinger.com',
+  port: parseInt(process.env.SMTP_PORT || '587'),
+  secure: false,
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_APP_PASSWORD // Mot de passe d'application Gmail
+    pass: process.env.EMAIL_APP_PASSWORD
+  },
+  tls: {
+    rejectUnauthorized: false
   }
 })
 
@@ -56,7 +62,7 @@ export const sendWelcomeEmail = async ({
   tempPassword: string
 }) => {
   const mailOptions = {
-    from: `"Maison Oscar" <${process.env.EMAIL_USER}>`,
+    from: `"Maison Oscar" <${process.env.SMTP_FROM_EMAIL || 'contact@maisonoscar.fr'}>`,
     to,
     subject: '🏡 Bienvenue dans l\'équipe Maison Oscar',
     html: `
@@ -290,7 +296,7 @@ export const sendPasswordResetEmail = async ({
   const resetLink = `${process.env.NEXTAUTH_URL}/admin/reset-password?token=${resetToken}`
   
   const mailOptions = {
-    from: `"Maison Oscar Admin" <${process.env.EMAIL_USER}>`,
+    from: `"Maison Oscar" <${process.env.SMTP_FROM_EMAIL || 'contact@maisonoscar.fr'}>`,
     to,
     subject: 'Réinitialisation de votre mot de passe',
     html: `
@@ -380,7 +386,7 @@ export const sendEmail = async (
   }
 
   const mailOptions = {
-    from: `"Maison Oscar" <${process.env.EMAIL_USER}>`,
+    from: `"Maison Oscar" <${process.env.SMTP_FROM_EMAIL || 'contact@maisonoscar.fr'}>`,
     to,
     subject,
     html
@@ -410,10 +416,8 @@ export const sendAdminEmail = async (
 
 // Email de notification pour nouveau contact avec template moderne
 export const sendContactNotification = async ({
-  adminEmail,
   contactData
 }: {
-  adminEmail: string
   contactData: {
     firstName: string
     lastName: string
@@ -424,81 +428,42 @@ export const sendContactNotification = async ({
     type: string
   }
 }) => {
-  const html = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Nouveau contact</title>
-      </head>
-      <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background: #f5f5f5;">
-        <div style="max-width: 600px; margin: 20px auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-          <!-- Header -->
-          <div style="background: #000; padding: 30px; text-align: center;">
-            <h1 style="color: #F5F3F0; margin: 0;">MAISON OSCAR</h1>
-            <p style="color: #F5F3F0; margin: 10px 0 0;">Nouveau message reçu</p>
-          </div>
-          
-          <!-- Content -->
-          <div style="padding: 30px;">
-            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-              <h2 style="color: #333; margin: 0 0 20px;">📬 Nouveau contact</h2>
-              
-              <div style="margin-bottom: 15px;">
-                <strong style="color: #666;">Type:</strong>
-                <span style="background: ${contactData.type === 'BOOKING' ? '#28a745' : '#17a2b8'}; color: white; padding: 3px 10px; border-radius: 4px; margin-left: 10px;">
-                  ${contactData.type === 'BOOKING' ? 'Réservation' : contactData.type === 'INFORMATION' ? 'Information' : 'Support'}
-                </span>
-              </div>
-              
-              <div style="margin-bottom: 10px;">
-                <strong style="color: #666;">De:</strong> ${contactData.firstName} ${contactData.lastName}
-              </div>
-              
-              <div style="margin-bottom: 10px;">
-                <strong style="color: #666;">Email:</strong> 
-                <a href="mailto:${contactData.email}" style="color: #007bff;">${contactData.email}</a>
-              </div>
-              
-              ${contactData.phone ? `
-              <div style="margin-bottom: 10px;">
-                <strong style="color: #666;">Téléphone:</strong> ${contactData.phone}
-              </div>
-              ` : ''}
-              
-              <div style="margin-bottom: 10px;">
-                <strong style="color: #666;">Objet:</strong> ${contactData.subject}
-              </div>
-            </div>
-            
-            <div style="background: #fff; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
-              <h3 style="color: #333; margin: 0 0 10px;">Message:</h3>
-              <p style="color: #666; line-height: 1.6; white-space: pre-wrap;">${contactData.message}</p>
-            </div>
-            
-            <div style="text-align: center; margin-top: 30px;">
-              <a href="${process.env.NEXTAUTH_URL}/admin/contacts" style="display: inline-block; background: #000; color: #F5F3F0; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold;">
-                Voir dans le dashboard
-              </a>
-            </div>
-          </div>
-          
-          <!-- Footer -->
-          <div style="background: #f5f5f5; padding: 20px; text-align: center; border-top: 1px solid #e0e0e0;">
-            <p style="color: #999; font-size: 12px; margin: 0;">
-              Cet email est envoyé automatiquement depuis le formulaire de contact
-            </p>
-          </div>
-        </div>
-      </body>
-    </html>
-  `
-  
-  return sendEmail(
-    adminEmail,
-    `🔔 Nouveau contact: ${contactData.subject}`,
-    html
-  )
+  // Récupérer tous les utilisateurs admins et managers de la plateforme
+  const { PrismaClient } = require('@prisma/client')
+  const prisma = new PrismaClient()
+
+  try {
+    const adminUsers = await prisma.user.findMany({
+      where: {
+        role: {
+          in: ['ADMIN', 'MANAGER']
+        },
+        status: 'ACTIVE'
+      },
+      select: {
+        email: true
+      }
+    })
+
+    const html = contactNotificationTemplate(contactData)
+
+    // Envoyer l'email à tous les admins
+    const emailPromises = adminUsers.map((admin: { email: string }) =>
+      sendEmail(
+        admin.email,
+        `🔔 Nouveau contact: ${contactData.subject}`,
+        html
+      )
+    )
+
+    await Promise.all(emailPromises)
+
+  } catch (error) {
+    console.error('Erreur lors de l\'envoi des notifications:', error)
+    throw error
+  } finally {
+    await prisma.$disconnect()
+  }
 }
 
 // Email de rappel pour paiement en retard
@@ -517,65 +482,14 @@ export const sendLatePaymentReminder = async ({
   roomName: string
   daysLate: number
 }) => {
-  const html = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Rappel de paiement</title>
-      </head>
-      <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background: #f5f5f5;">
-        <div style="max-width: 600px; margin: 20px auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-          <!-- Header -->
-          <div style="background: #ff6b6b; padding: 30px; text-align: center;">
-            <h1 style="color: white; margin: 0;">⚠️ Rappel de paiement</h1>
-          </div>
-          
-          <!-- Content -->
-          <div style="padding: 30px;">
-            <h2 style="color: #333;">Bonjour ${tenantName},</h2>
-            
-            <p style="color: #666; line-height: 1.6; margin-bottom: 20px;">
-              Nous vous rappelons que votre loyer pour la chambre <strong>${roomName}</strong> 
-              était dû le <strong>${dueDate.toLocaleDateString('fr-FR')}</strong>.
-            </p>
-            
-            <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 20px; border-radius: 8px; margin: 20px 0;">
-              <h3 style="color: #856404; margin: 0 0 10px;">Détails du paiement:</h3>
-              <div style="color: #856404;">
-                <p><strong>Montant dû:</strong> ${amount}€</p>
-                <p><strong>Retard:</strong> ${daysLate} jour${daysLate > 1 ? 's' : ''}</p>
-                <p><strong>Date limite:</strong> ${dueDate.toLocaleDateString('fr-FR')}</p>
-              </div>
-            </div>
-            
-            <p style="color: #666; line-height: 1.6;">
-              Merci de régulariser votre situation dans les plus brefs délais. 
-              Si vous avez déjà effectué ce paiement, veuillez ignorer ce message.
-            </p>
-            
-            <p style="color: #666; line-height: 1.6;">
-              En cas de difficultés ou pour toute question, n'hésitez pas à nous contacter.
-            </p>
-            
-            <div style="text-align: center; margin-top: 30px;">
-              <a href="mailto:${process.env.EMAIL_USER}" style="display: inline-block; background: #28a745; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold;">
-                Nous contacter
-              </a>
-            </div>
-          </div>
-          
-          <!-- Footer -->
-          <div style="background: #f5f5f5; padding: 20px; text-align: center; border-top: 1px solid #e0e0e0;">
-            <p style="color: #999; font-size: 12px; margin: 0;">
-              Maison Oscar - Gestion locative
-            </p>
-          </div>
-        </div>
-      </body>
-    </html>
-  `
-  
+  const html = latePaymentReminderTemplate({
+    tenantName,
+    amount,
+    dueDate,
+    roomName,
+    daysLate
+  })
+
   return sendEmail(
     tenantEmail,
     `⚠️ Rappel: Loyer en retard - ${roomName}`,
@@ -599,101 +513,13 @@ export const sendStyledBookingConfirmation = async ({
   price: number
   bookingId: string
 }) => {
-  const html = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Confirmation de réservation</title>
-      </head>
-      <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh;">
-        <div style="max-width: 600px; margin: 40px auto; background: white; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
-          <!-- Header avec image -->
-          <div style="position: relative; height: 200px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">
-              <div style="width: 80px; height: 80px; background: white; border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; font-size: 40px;">
-                ✅
-              </div>
-              <h1 style="color: white; margin: 0; font-size: 28px;">Réservation confirmée!</h1>
-            </div>
-          </div>
-          
-          <!-- Content -->
-          <div style="padding: 40px 30px;">
-            <h2 style="color: #333; margin-bottom: 10px;">Félicitations ${tenantName}! 🎉</h2>
-            <p style="color: #666; line-height: 1.6; margin-bottom: 30px;">
-              Votre réservation pour la <strong>${roomName}</strong> a été confirmée avec succès.
-              Nous avons hâte de vous accueillir à la Maison Oscar!
-            </p>
-            
-            <!-- Détails de la réservation -->
-            <div style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); padding: 25px; border-radius: 15px; margin: 30px 0;">
-              <h3 style="color: #333; margin: 0 0 20px; font-size: 18px;">📋 Détails de votre réservation</h3>
-              
-              <div style="background: white; padding: 20px; border-radius: 10px;">
-                <table style="width: 100%; border-collapse: collapse;">
-                  <tr>
-                    <td style="padding: 10px 0; color: #666;">N° de réservation:</td>
-                    <td style="padding: 10px 0; color: #333; font-weight: bold; text-align: right;">#${bookingId.slice(-8).toUpperCase()}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 10px 0; color: #666; border-top: 1px solid #f0f0f0;">Chambre:</td>
-                    <td style="padding: 10px 0; color: #333; font-weight: bold; text-align: right; border-top: 1px solid #f0f0f0;">${roomName}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 10px 0; color: #666; border-top: 1px solid #f0f0f0;">Date d'emménagement:</td>
-                    <td style="padding: 10px 0; color: #333; font-weight: bold; text-align: right; border-top: 1px solid #f0f0f0;">${startDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 10px 0; color: #666; border-top: 1px solid #f0f0f0;">Loyer mensuel:</td>
-                    <td style="padding: 10px 0; color: #28a745; font-weight: bold; font-size: 20px; text-align: right; border-top: 1px solid #f0f0f0;">${price}€</td>
-                  </tr>
-                </table>
-              </div>
-            </div>
-            
-            <!-- Prochaines étapes -->
-            <div style="background: #f8f9fa; padding: 25px; border-radius: 15px; margin: 30px 0;">
-              <h3 style="color: #333; margin: 0 0 15px;">🚀 Prochaines étapes</h3>
-              <ol style="color: #666; line-height: 1.8; margin: 0; padding-left: 20px;">
-                <li>Complétez votre dossier avec les documents requis</li>
-                <li>Signez le contrat de location électroniquement</li>
-                <li>Effectuez le paiement du premier loyer et du dépôt de garantie</li>
-                <li>Récupérez vos clés le jour de l'emménagement</li>
-              </ol>
-            </div>
-            
-            <!-- CTA Buttons -->
-            <div style="text-align: center; margin: 40px 0;">
-              <a href="${process.env.NEXTAUTH_URL}/dashboard" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 50px; font-weight: bold; margin: 0 10px;">
-                Accéder à mon espace
-              </a>
-            </div>
-            
-            <!-- Contact -->
-            <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 10px;">
-              <p style="color: #666; margin: 0 0 10px;">Des questions? Nous sommes là pour vous aider!</p>
-              <p style="margin: 0;">
-                📧 <a href="mailto:contact@maisonoscar.fr" style="color: #667eea; text-decoration: none;">contact@maisonoscar.fr</a>
-                &nbsp;&nbsp;|&nbsp;&nbsp;
-                📱 06 12 34 56 78
-              </p>
-            </div>
-          </div>
-          
-          <!-- Footer -->
-          <div style="background: #f5f5f5; padding: 30px; text-align: center; border-top: 1px solid #e0e0e0;">
-            <p style="color: #999; font-size: 14px; margin: 0 0 10px;">
-              Merci de votre confiance! 💜
-            </p>
-            <p style="color: #999; font-size: 12px; margin: 0;">
-              © 2024 Maison Oscar - Colocation étudiante à Bruz
-            </p>
-          </div>
-        </div>
-      </body>
-    </html>
-  `
+  const html = bookingConfirmationTemplate({
+    tenantName,
+    roomName,
+    startDate,
+    price,
+    bookingId
+  })
   
   return sendEmail(
     tenantEmail,

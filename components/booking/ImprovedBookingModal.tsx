@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   X, ChevronRight, ChevronLeft, Calendar, User, Users, Home, Briefcase,
   FileText, Upload, Check, AlertCircle, Loader2, Clock, Shield,
-  MessageSquare, Info, Eye
+  MessageSquare, Info, Eye, Download
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -24,6 +24,8 @@ interface Roommate {
   phone: string
   birthDate: string
   birthPlace: string
+  nationality: string
+  maritalStatus: string
   profession: string
   professionalStatus: 'EMPLOYEE' | 'SELF_EMPLOYED' | 'BUSINESS_OWNER' | 'STUDENT' | 'ALTERNANT' | 'UNEMPLOYED' | 'OTHER'
   currentAddress: string
@@ -159,6 +161,8 @@ const steps = [
 export default function ImprovedBookingModal({ isOpen, onClose, roomId, roomName, roomPrice }: BookingModalProps) {
   const [currentStep, setCurrentStep] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showDocumentPreview, setShowDocumentPreview] = useState(false)
+  const [previewFile, setPreviewFile] = useState<File | null>(null)
 
   // Fonction helper pour créer un colocataire vide
   const createEmptyRoommate = (): Roommate => ({
@@ -168,6 +172,8 @@ export default function ImprovedBookingModal({ isOpen, onClose, roomId, roomName
     phone: '',
     birthDate: '',
     birthPlace: '',
+    nationality: 'Française',
+    maritalStatus: 'Célibataire',
     profession: '',
     professionalStatus: 'EMPLOYEE',
     currentAddress: '',
@@ -259,6 +265,11 @@ export default function ImprovedBookingModal({ isOpen, onClose, roomId, roomName
     setCurrentStep(prev => Math.max(prev - 1, 0))
   }
 
+  const openDocumentPreview = (file: File) => {
+    setPreviewFile(file)
+    setShowDocumentPreview(true)
+  }
+
   const validateCurrentStep = () => {
     switch (steps[currentStep].id) {
       case 'duration':
@@ -288,6 +299,7 @@ export default function ImprovedBookingModal({ isOpen, onClose, roomId, roomName
             const roommate = formData.roommates[i]
             if (!roommate.firstName || !roommate.lastName || !roommate.email ||
                 !roommate.phone || !roommate.birthDate || !roommate.birthPlace ||
+                !roommate.nationality || !roommate.maritalStatus ||
                 !roommate.currentAddress || !roommate.currentCity || !roommate.currentZipCode) {
               toast.error(`Veuillez remplir tous les champs obligatoires du colocataire ${i + 1}`)
               return false
@@ -415,19 +427,23 @@ export default function ImprovedBookingModal({ isOpen, onClose, roomId, roomName
       // Upload des documents d'abord
       const uploadedDocs: any = {}
 
+      // DEBUG: Show what documents we're trying to upload
+      console.log('📁 Documents to upload:', formData.documents)
+      console.log('📁 Number of documents:', Object.keys(formData.documents).length)
+
       // Documents principaux
       for (const [key, value] of Object.entries(formData.documents)) {
         if (value) {
           if (Array.isArray(value)) {
             uploadedDocs[key] = []
             for (const file of value) {
-              const formData = new FormData()
-              formData.append('file', file)
-              formData.append('type', 'documents')
+              const uploadFormData = new FormData()
+              uploadFormData.append('file', file)
+              uploadFormData.append('type', 'documents')
 
               const response = await fetch('/api/upload', {
                 method: 'POST',
-                body: formData
+                body: uploadFormData
               })
 
               if (response.ok) {
@@ -436,13 +452,13 @@ export default function ImprovedBookingModal({ isOpen, onClose, roomId, roomName
               }
             }
           } else {
-            const formDataUpload = new FormData()
-            formDataUpload.append('file', value)
-            formDataUpload.append('type', 'documents')
+            const uploadFormData = new FormData()
+            uploadFormData.append('file', value)
+            uploadFormData.append('type', 'documents')
 
             const response = await fetch('/api/upload', {
               method: 'POST',
-              body: formDataUpload
+              body: uploadFormData
             })
 
             if (response.ok) {
@@ -463,13 +479,13 @@ export default function ImprovedBookingModal({ isOpen, onClose, roomId, roomName
               if (Array.isArray(value)) {
                 roommateDocuments[key] = []
                 for (const file of value) {
-                  const formDataUpload = new FormData()
-                  formDataUpload.append('file', file)
-                  formDataUpload.append('type', 'documents')
+                  const uploadFormData = new FormData()
+                  uploadFormData.append('file', file)
+                  uploadFormData.append('type', 'documents')
 
                   const response = await fetch('/api/upload', {
                     method: 'POST',
-                    body: formDataUpload
+                    body: uploadFormData
                   })
 
                   if (response.ok) {
@@ -478,13 +494,13 @@ export default function ImprovedBookingModal({ isOpen, onClose, roomId, roomName
                   }
                 }
               } else {
-                const formDataUpload = new FormData()
-                formDataUpload.append('file', value)
-                formDataUpload.append('type', 'documents')
+                const uploadFormData = new FormData()
+                uploadFormData.append('file', value)
+                uploadFormData.append('type', 'documents')
 
                 const response = await fetch('/api/upload', {
                   method: 'POST',
-                  body: formDataUpload
+                  body: uploadFormData
                 })
 
                 if (response.ok) {
@@ -512,13 +528,13 @@ export default function ImprovedBookingModal({ isOpen, onClose, roomId, roomName
               if (Array.isArray(value)) {
                 guarantorDocuments[key] = []
                 for (const file of value) {
-                  const formDataUpload = new FormData()
-                  formDataUpload.append('file', file)
-                  formDataUpload.append('type', 'documents')
+                  const uploadFormData = new FormData()
+                  uploadFormData.append('file', file)
+                  uploadFormData.append('type', 'documents')
 
                   const response = await fetch('/api/upload', {
                     method: 'POST',
-                    body: formDataUpload
+                    body: uploadFormData
                   })
 
                   if (response.ok) {
@@ -527,13 +543,13 @@ export default function ImprovedBookingModal({ isOpen, onClose, roomId, roomName
                   }
                 }
               } else {
-                const formDataUpload = new FormData()
-                formDataUpload.append('file', value)
-                formDataUpload.append('type', 'documents')
+                const uploadFormData = new FormData()
+                uploadFormData.append('file', value)
+                uploadFormData.append('type', 'documents')
 
                 const response = await fetch('/api/upload', {
                   method: 'POST',
-                  body: formDataUpload
+                  body: uploadFormData
                 })
 
                 if (response.ok) {
@@ -563,6 +579,8 @@ export default function ImprovedBookingModal({ isOpen, onClose, roomId, roomName
           phone: rm.phone,
           birthDate: rm.birthDate,
           birthPlace: rm.birthPlace,
+          nationality: rm.nationality,
+          maritalStatus: rm.maritalStatus,
           professionalStatus: rm.professionalStatus,
           profession: rm.profession,
           currentAddress: rm.currentAddress,
@@ -573,6 +591,10 @@ export default function ImprovedBookingModal({ isOpen, onClose, roomId, roomName
         guarantors: uploadedGuarantors,
         status: 'SUBMITTED'
       }
+
+      // DEBUG: Show final data being sent
+      console.log('📤 Final submission data:', submissionData)
+      console.log('📤 Uploaded documents:', uploadedDocs)
 
       // Soumettre le dossier
       const response = await fetch('/api/booking-requests', {
@@ -749,6 +771,38 @@ export default function ImprovedBookingModal({ isOpen, onClose, roomId, roomName
                   onChange={(e) => setFormData(prev => ({ ...prev, birthPlace: e.target.value }))}
                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
                 />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Nationalité *
+                </label>
+                <select
+                  value={formData.nationality}
+                  onChange={(e) => setFormData(prev => ({ ...prev, nationality: e.target.value }))}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                >
+                  <option value="Française">Française</option>
+                  <option value="Européenne">Européenne</option>
+                  <option value="Autre">Autre</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Situation maritale *
+                </label>
+                <select
+                  value={formData.maritalStatus}
+                  onChange={(e) => setFormData(prev => ({ ...prev, maritalStatus: e.target.value }))}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                >
+                  <option value="Célibataire">Célibataire</option>
+                  <option value="Marié(e)">Marié(e)</option>
+                  <option value="Pacsé(e)">Pacsé(e)</option>
+                  <option value="Divorcé(e)">Divorcé(e)</option>
+                  <option value="Veuf/Veuve">Veuf/Veuve</option>
+                </select>
               </div>
             </div>
 
@@ -1006,6 +1060,51 @@ export default function ImprovedBookingModal({ isOpen, onClose, roomId, roomName
                           </div>
                         </div>
 
+                        {/* Nationalité et situation maritale */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              Nationalité *
+                            </label>
+                            <select
+                              value={roommate.nationality}
+                              onChange={(e) => setFormData(prev => ({
+                                ...prev,
+                                roommates: prev.roommates.map((r, i) =>
+                                  i === index ? { ...r, nationality: e.target.value } : r
+                                )
+                              }))}
+                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                            >
+                              <option value="Française">Française</option>
+                              <option value="Européenne">Européenne</option>
+                              <option value="Autre">Autre</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              Situation maritale *
+                            </label>
+                            <select
+                              value={roommate.maritalStatus}
+                              onChange={(e) => setFormData(prev => ({
+                                ...prev,
+                                roommates: prev.roommates.map((r, i) =>
+                                  i === index ? { ...r, maritalStatus: e.target.value } : r
+                                )
+                              }))}
+                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                            >
+                              <option value="Célibataire">Célibataire</option>
+                              <option value="Marié(e)">Marié(e)</option>
+                              <option value="Pacsé(e)">Pacsé(e)</option>
+                              <option value="Divorcé(e)">Divorcé(e)</option>
+                              <option value="Veuf/Veuve">Veuf/Veuve</option>
+                            </select>
+                          </div>
+                        </div>
+
                         {/* Adresse actuelle */}
                         <div>
                           <label className="block text-xs font-medium text-gray-700 mb-1">
@@ -1139,7 +1238,19 @@ export default function ImprovedBookingModal({ isOpen, onClose, roomId, roomName
                                 className="w-full text-xs px-2 py-1.5 border border-gray-300 rounded-lg"
                               />
                               {roommate.documents.identity && (
-                                <p className="text-xs text-green-600 mt-1">✓ Fichier sélectionné: {roommate.documents.identity.name}</p>
+                                <div className="flex items-center justify-between bg-green-50 p-2 rounded-lg mt-2">
+                                  <p className="text-xs text-green-600 flex items-center gap-1">
+                                    <Check className="w-3 h-3" />
+                                    Fichier sélectionné: {roommate.documents.identity.name}
+                                  </p>
+                                  <button
+                                    onClick={() => openDocumentPreview(roommate.documents.identity!)}
+                                    className="p-1 hover:bg-green-100 rounded transition-colors"
+                                    title="Prévisualiser le document"
+                                  >
+                                    <Eye className="w-4 h-4 text-green-600" />
+                                  </button>
+                                </div>
                               )}
                             </div>
 
@@ -1169,7 +1280,19 @@ export default function ImprovedBookingModal({ isOpen, onClose, roomId, roomName
                                   className="w-full text-xs px-2 py-1.5 border border-gray-300 rounded-lg"
                                 />
                                 {roommate.documents.employmentContract && (
-                                  <p className="text-xs text-green-600 mt-1">✓ Fichier sélectionné: {roommate.documents.employmentContract.name}</p>
+                                  <div className="flex items-center justify-between bg-green-50 p-2 rounded-lg mt-2">
+                                    <p className="text-xs text-green-600 flex items-center gap-1">
+                                      <Check className="w-3 h-3" />
+                                      Fichier sélectionné: {roommate.documents.employmentContract.name}
+                                    </p>
+                                    <button
+                                      onClick={() => openDocumentPreview(roommate.documents.employmentContract!)}
+                                      className="p-1 hover:bg-green-100 rounded transition-colors"
+                                      title="Prévisualiser le document"
+                                    >
+                                      <Eye className="w-4 h-4 text-green-600" />
+                                    </button>
+                                  </div>
                                 )}
                               </div>
                             )}
@@ -1199,7 +1322,19 @@ export default function ImprovedBookingModal({ isOpen, onClose, roomId, roomName
                                   className="w-full text-xs px-2 py-1.5 border border-gray-300 rounded-lg"
                                 />
                                 {roommate.documents.studentCard && (
-                                  <p className="text-xs text-green-600 mt-1">✓ Fichier sélectionné: {roommate.documents.studentCard.name}</p>
+                                  <div className="flex items-center justify-between bg-green-50 p-2 rounded-lg mt-2">
+                                    <p className="text-xs text-green-600 flex items-center gap-1">
+                                      <Check className="w-3 h-3" />
+                                      Fichier sélectionné: {roommate.documents.studentCard.name}
+                                    </p>
+                                    <button
+                                      onClick={() => openDocumentPreview(roommate.documents.studentCard!)}
+                                      className="p-1 hover:bg-green-100 rounded transition-colors"
+                                      title="Prévisualiser le document"
+                                    >
+                                      <Eye className="w-4 h-4 text-green-600" />
+                                    </button>
+                                  </div>
                                 )}
                               </div>
                             )}
@@ -1557,7 +1692,7 @@ export default function ImprovedBookingModal({ isOpen, onClose, roomId, roomName
                               <label className="flex items-center">
                                 <input
                                   type="checkbox"
-                                  checked={guarantor.assignedTo.includes(0)}
+                                  checked={Array.isArray(guarantor.assignedTo) && guarantor.assignedTo.includes(0)}
                                   onChange={(e) => {
                                     const newAssignedTo = e.target.checked
                                       ? [...(guarantor.assignedTo as number[]), 0]
@@ -1577,7 +1712,7 @@ export default function ImprovedBookingModal({ isOpen, onClose, roomId, roomName
                                 <label key={rmIndex} className="flex items-center">
                                   <input
                                     type="checkbox"
-                                    checked={guarantor.assignedTo.includes(rmIndex + 1)}
+                                    checked={Array.isArray(guarantor.assignedTo) && guarantor.assignedTo.includes(rmIndex + 1)}
                                     onChange={(e) => {
                                       const newAssignedTo = e.target.checked
                                         ? [...(guarantor.assignedTo as number[]), rmIndex + 1]
@@ -1725,7 +1860,19 @@ export default function ImprovedBookingModal({ isOpen, onClose, roomId, roomName
                                     className="w-full text-xs px-2 py-1.5 border border-gray-300 rounded-lg"
                                   />
                                   {guarantor.documents.identity && (
-                                    <p className="text-xs text-green-600 mt-1">✓ Fichier sélectionné: {guarantor.documents.identity.name}</p>
+                                    <div className="flex items-center justify-between bg-green-50 p-2 rounded-lg mt-2">
+                                      <p className="text-xs text-green-600 flex items-center gap-1">
+                                        <Check className="w-3 h-3" />
+                                        Fichier sélectionné: {guarantor.documents.identity.name}
+                                      </p>
+                                      <button
+                                        onClick={() => openDocumentPreview(guarantor.documents.identity!)}
+                                        className="p-1 hover:bg-green-100 rounded transition-colors"
+                                        title="Prévisualiser le document"
+                                      >
+                                        <Eye className="w-4 h-4 text-green-600" />
+                                      </button>
+                                    </div>
                                   )}
                                 </div>
                               </div>
@@ -1773,7 +1920,19 @@ export default function ImprovedBookingModal({ isOpen, onClose, roomId, roomName
                                 className="w-full text-xs px-2 py-1.5 border border-gray-300 rounded-lg"
                               />
                               {guarantor.documents.visaleAttestation && (
-                                <p className="text-xs text-green-600 mt-1">✓ Fichier sélectionné: {guarantor.documents.visaleAttestation.name}</p>
+                                <div className="flex items-center justify-between bg-green-50 p-2 rounded-lg mt-2">
+                                  <p className="text-xs text-green-600 flex items-center gap-1">
+                                    <Check className="w-3 h-3" />
+                                    Fichier sélectionné: {guarantor.documents.visaleAttestation.name}
+                                  </p>
+                                  <button
+                                    onClick={() => openDocumentPreview(guarantor.documents.visaleAttestation!)}
+                                    className="p-1 hover:bg-green-100 rounded transition-colors"
+                                    title="Prévisualiser le document"
+                                  >
+                                    <Eye className="w-4 h-4 text-green-600" />
+                                  </button>
+                                </div>
                               )}
                             </div>
                           </div>
@@ -1837,7 +1996,30 @@ export default function ImprovedBookingModal({ isOpen, onClose, roomId, roomName
                   className="w-full text-xs px-2 py-1.5 border border-gray-300 rounded-lg"
                 />
                 {formData.documents.identity && (
-                  <p className="text-xs text-green-600 mt-1">✓ Fichier sélectionné: {formData.documents.identity.name}</p>
+                  <div className="flex items-center justify-between bg-green-50 p-2 rounded-lg mt-2">
+                    <p className="text-xs text-green-600 flex items-center gap-1">
+                      <Check className="w-3 h-3" />
+                      Fichier sélectionné: {formData.documents.identity.name}
+                    </p>
+                    <button
+                      onClick={() => openDocumentPreview(formData.documents.identity!)}
+                      className="p-1 hover:bg-green-100 rounded transition-colors"
+                      title="Prévisualiser le document"
+                    >
+                      <Eye className="w-4 h-4 text-green-600" />
+                    </button>
+                  </div>
+                )}
+                {/* DEBUG: Show if documents are being stored */}
+                {process.env.NODE_ENV === 'development' && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    DEBUG: Documents in state: {Object.keys(formData.documents).length} items
+                    {Object.keys(formData.documents).length > 0 && (
+                      <pre className="text-xs bg-gray-100 p-1 rounded mt-1">
+                        {JSON.stringify(Object.keys(formData.documents), null, 2)}
+                      </pre>
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -1861,7 +2043,23 @@ export default function ImprovedBookingModal({ isOpen, onClose, roomId, roomName
                     className="w-full text-xs px-2 py-1.5 border border-gray-300 rounded-lg"
                   />
                   {formData.documents.proofOfAddress && formData.documents.proofOfAddress.length > 0 && (
-                    <p className="text-xs text-green-600 mt-1">✓ {formData.documents.proofOfAddress.length} fichier(s) sélectionné(s)</p>
+                    <div className="mt-2 space-y-1">
+                      {formData.documents.proofOfAddress.map((file, index) => (
+                        <div key={index} className="flex items-center justify-between bg-green-50 p-2 rounded-lg">
+                          <p className="text-xs text-green-600 flex items-center gap-1">
+                            <Check className="w-3 h-3" />
+                            Fichier {index + 1}: {file.name}
+                          </p>
+                          <button
+                            onClick={() => openDocumentPreview(file)}
+                            className="p-1 hover:bg-green-100 rounded transition-colors"
+                            title="Prévisualiser le document"
+                          >
+                            <Eye className="w-4 h-4 text-green-600" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
               )}
@@ -1887,7 +2085,19 @@ export default function ImprovedBookingModal({ isOpen, onClose, roomId, roomName
                     className="w-full text-xs px-2 py-1.5 border border-gray-300 rounded-lg"
                   />
                   {formData.documents.taxNotice && (
-                    <p className="text-xs text-green-600 mt-1">✓ Fichier sélectionné: {formData.documents.taxNotice.name}</p>
+                    <div className="flex items-center justify-between bg-green-50 p-2 rounded-lg mt-2">
+                      <p className="text-xs text-green-600 flex items-center gap-1">
+                        <Check className="w-3 h-3" />
+                        Fichier sélectionné: {formData.documents.taxNotice.name}
+                      </p>
+                      <button
+                        onClick={() => openDocumentPreview(formData.documents.taxNotice!)}
+                        className="p-1 hover:bg-green-100 rounded transition-colors"
+                        title="Prévisualiser le document"
+                      >
+                        <Eye className="w-4 h-4 text-green-600" />
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
@@ -1914,7 +2124,19 @@ export default function ImprovedBookingModal({ isOpen, onClose, roomId, roomName
                       className="w-full text-xs px-2 py-1.5 border border-gray-300 rounded-lg"
                     />
                     {formData.documents.identityGuardian1 && (
-                      <p className="text-xs text-green-600 mt-1">✓ Fichier sélectionné: {formData.documents.identityGuardian1.name}</p>
+                      <div className="flex items-center justify-between bg-green-50 p-2 rounded-lg mt-2">
+                        <p className="text-xs text-green-600 flex items-center gap-1">
+                          <Check className="w-3 h-3" />
+                          Fichier sélectionné: {formData.documents.identityGuardian1.name}
+                        </p>
+                        <button
+                          onClick={() => openDocumentPreview(formData.documents.identityGuardian1!)}
+                          className="p-1 hover:bg-green-100 rounded transition-colors"
+                          title="Prévisualiser le document"
+                        >
+                          <Eye className="w-4 h-4 text-green-600" />
+                        </button>
+                      </div>
                     )}
                   </div>
 
@@ -1959,7 +2181,19 @@ export default function ImprovedBookingModal({ isOpen, onClose, roomId, roomName
                       className="w-full text-xs px-2 py-1.5 border border-gray-300 rounded-lg"
                     />
                     {formData.documents.taxNoticeGuardian && (
-                      <p className="text-xs text-green-600 mt-1">✓ Fichier sélectionné: {formData.documents.taxNoticeGuardian.name}</p>
+                      <div className="flex items-center justify-between bg-green-50 p-2 rounded-lg mt-2">
+                        <p className="text-xs text-green-600 flex items-center gap-1">
+                          <Check className="w-3 h-3" />
+                          Fichier sélectionné: {formData.documents.taxNoticeGuardian.name}
+                        </p>
+                        <button
+                          onClick={() => openDocumentPreview(formData.documents.taxNoticeGuardian!)}
+                          className="p-1 hover:bg-green-100 rounded transition-colors"
+                          title="Prévisualiser le document"
+                        >
+                          <Eye className="w-4 h-4 text-green-600" />
+                        </button>
+                      </div>
                     )}
                   </div>
                 </>
@@ -1987,7 +2221,19 @@ export default function ImprovedBookingModal({ isOpen, onClose, roomId, roomName
                       className="w-full text-xs px-2 py-1.5 border border-gray-300 rounded-lg"
                     />
                     {formData.documents.employmentContract && (
-                      <p className="text-xs text-green-600 mt-1">✓ Fichier sélectionné: {formData.documents.employmentContract.name}</p>
+                      <div className="flex items-center justify-between bg-green-50 p-2 rounded-lg mt-2">
+                        <p className="text-xs text-green-600 flex items-center gap-1">
+                          <Check className="w-3 h-3" />
+                          Fichier sélectionné: {formData.documents.employmentContract.name}
+                        </p>
+                        <button
+                          onClick={() => openDocumentPreview(formData.documents.employmentContract!)}
+                          className="p-1 hover:bg-green-100 rounded transition-colors"
+                          title="Prévisualiser le document"
+                        >
+                          <Eye className="w-4 h-4 text-green-600" />
+                        </button>
+                      </div>
                     )}
                   </div>
 
@@ -2035,7 +2281,19 @@ export default function ImprovedBookingModal({ isOpen, onClose, roomId, roomName
                     className="w-full text-xs px-2 py-1.5 border border-gray-300 rounded-lg"
                   />
                   {formData.documents.studentCard && (
-                    <p className="text-xs text-green-600 mt-1">✓ Fichier sélectionné: {formData.documents.studentCard.name}</p>
+                    <div className="flex items-center justify-between bg-green-50 p-2 rounded-lg mt-2">
+                      <p className="text-xs text-green-600 flex items-center gap-1">
+                        <Check className="w-3 h-3" />
+                        Fichier sélectionné: {formData.documents.studentCard.name}
+                      </p>
+                      <button
+                        onClick={() => openDocumentPreview(formData.documents.studentCard!)}
+                        className="p-1 hover:bg-green-100 rounded transition-colors"
+                        title="Prévisualiser le document"
+                      >
+                        <Eye className="w-4 h-4 text-green-600" />
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
@@ -2060,7 +2318,19 @@ export default function ImprovedBookingModal({ isOpen, onClose, roomId, roomName
                     className="w-full text-xs px-2 py-1.5 border border-gray-300 rounded-lg"
                   />
                   {formData.documents.alternanceContract && (
-                    <p className="text-xs text-green-600 mt-1">✓ Fichier sélectionné: {formData.documents.alternanceContract.name}</p>
+                    <div className="flex items-center justify-between bg-green-50 p-2 rounded-lg mt-2">
+                      <p className="text-xs text-green-600 flex items-center gap-1">
+                        <Check className="w-3 h-3" />
+                        Fichier sélectionné: {formData.documents.alternanceContract.name}
+                      </p>
+                      <button
+                        onClick={() => openDocumentPreview(formData.documents.alternanceContract!)}
+                        className="p-1 hover:bg-green-100 rounded transition-colors"
+                        title="Prévisualiser le document"
+                      >
+                        <Eye className="w-4 h-4 text-green-600" />
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
@@ -2411,6 +2681,95 @@ export default function ImprovedBookingModal({ isOpen, onClose, roomId, roomName
                   )}
                 </button>
               )}
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+
+      {/* Document Preview Modal */}
+      {showDocumentPreview && previewFile && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+          onClick={() => setShowDocumentPreview(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Prévisualisation - {previewFile.name}
+              </h3>
+              <button
+                onClick={() => setShowDocumentPreview(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-auto p-4">
+              {previewFile.type.startsWith('image/') ? (
+                <img
+                  src={URL.createObjectURL(previewFile)}
+                  alt="Document preview"
+                  className="max-w-full max-h-full object-contain mx-auto"
+                />
+              ) : previewFile.type === 'application/pdf' ? (
+                <embed
+                  src={URL.createObjectURL(previewFile)}
+                  type="application/pdf"
+                  width="100%"
+                  height="600px"
+                  className="border rounded"
+                />
+              ) : (
+                <div className="text-center py-12">
+                  <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500 mb-4">
+                    Impossible de prévisualiser ce type de fichier
+                  </p>
+                  <p className="text-sm text-gray-400">
+                    Type: {previewFile.type} • Taille: {(previewFile.size / 1024 / 1024).toFixed(2)} MB
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between p-4 border-t border-gray-200">
+              <p className="text-sm text-gray-500">
+                {(previewFile.size / 1024 / 1024).toFixed(2)} MB
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    const url = URL.createObjectURL(previewFile)
+                    const a = document.createElement('a')
+                    a.href = url
+                    a.download = previewFile.name
+                    document.body.appendChild(a)
+                    a.click()
+                    document.body.removeChild(a)
+                    URL.revokeObjectURL(url)
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                  Télécharger
+                </button>
+                <button
+                  onClick={() => setShowDocumentPreview(false)}
+                  className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+                >
+                  Fermer
+                </button>
+              </div>
             </div>
           </motion.div>
         </motion.div>

@@ -98,6 +98,33 @@
       "Espace coworking",
       "Salle de sport",
       "Local vélos"
+    ],
+    "images": [
+      {
+        "url": "/images/house/salle-de-bain.jpg",
+        "title": "salle de bain",
+        "description": "Image de la maison salle-de-bain"
+      },
+      {
+        "url": "/images/house/salon-principal.jpg",
+        "title": "salon principal",
+        "description": "Image de la maison salon-principal"
+      },
+      {
+        "url": "/images/house/1758227819733-ffnvei86uzc.jpg",
+        "title": "Jardin & Terrasse",
+        "description": ""
+      },
+      {
+        "url": "/images/house/1758227880532-vfhmqk2v6i.jpeg",
+        "title": "Cuisine Moderne",
+        "description": "cuisine moderne pour vos petits plats So Breizh"
+      },
+      {
+        "url": "/images/house/1758227986356-orw73ixeh3.jpeg",
+        "title": "Avant",
+        "description": "la ou debute votre histoire"
+      }
     ]
   },
   "commonSpaces": {

@@ -30,7 +30,21 @@ export async function POST(request: NextRequest) {
     
     // Récupérer la configuration juridique (placeholder pour l'instant)
     const legalConfig = null as any
-    
+
+    // Récupérer la signature par défaut de l'admin
+    let defaultAdminSignature = ''
+    try {
+      const adminSignature = await prisma.adminSignature.findFirst({
+        where: { isDefault: true },
+        select: { signatureData: true }
+      })
+      if (adminSignature) {
+        defaultAdminSignature = adminSignature.signatureData
+      }
+    } catch (error) {
+      console.warn('Aucune signature admin par défaut trouvée:', error)
+    }
+
     // Préparer les données pour le contrat
     const contractData: any = {
       // Informations du bailleur
@@ -63,19 +77,45 @@ export async function POST(request: NextRequest) {
       // Lieu et date
       CITY: 'Bruz',
       CONTRACT_DATE: new Date().toLocaleDateString('fr-FR'),
-      ADMIN_SIGNATURE: '',
+      ADMIN_SIGNATURE: defaultAdminSignature,
       TENANT_SIGNATURE: ''
     }
     
     // Si colocataires, les ajouter
     if (bookingRequest.roommates && bookingRequest.roommates.length > 0) {
-      contractData.ROOMMATES = bookingRequest.roommates.map((rm: any) => 
+      contractData.ROOMMATES = bookingRequest.roommates.map((rm: any) =>
         `${rm.firstName} ${rm.lastName}`
       ).join(', ')
+
+      // Ajouter les données individuelles des colocataires pour les initiales
+      bookingRequest.roommates.forEach((rm: any, index: number) => {
+        contractData[`ROOMMATE_${index + 1}_NAME`] = `${rm.firstName} ${rm.lastName}`
+      })
     }
     
-    // Récupérer le modèle de contrat par défaut
-    const defaultContract = `CONTRAT DE LOCATION EN COLIVING
+    // Récupérer le template de contrat
+    let contractTemplate = null
+
+    if (contractTemplateId) {
+      // Template spécifique demandé
+      contractTemplate = await prisma.contractTemplate.findUnique({
+        where: { id: contractTemplateId }
+      })
+    } else {
+      // Template par défaut
+      contractTemplate = await prisma.contractTemplate.findFirst({
+        where: { isDefault: true }
+      })
+    }
+
+    let pdfBase64 = ''
+
+    if (contractTemplate) {
+      // Utiliser le template content personnalisé et générer un nouveau PDF
+      pdfBase64 = generateContractPDF(contractTemplate.pdfData, contractData, `contrat_${bookingRequest.firstName}_${bookingRequest.lastName}.pdf`)
+    } else {
+      // Fallback vers le contrat généré par défaut
+      const defaultContract = `CONTRAT DE LOCATION EN COLIVING
 
 Entre les soussignés :
 
@@ -132,10 +172,13 @@ Fait à ${contractData.CITY}, le ${contractData.CONTRACT_DATE}
 En deux exemplaires originaux
 
 **Le Bailleur**                    **Le Locataire**
+
+[SIGNATURE:ADMIN_SIGNATURE]                [SIGNATURE:TENANT_SIGNATURE]
 `
-    
-    // Générer le PDF (retourne base64)
-    const pdfBase64 = generateContractPDF(defaultContract, contractData, `contrat_${bookingRequest.firstName}_${bookingRequest.lastName}.pdf`)
+
+      // Générer le PDF (retourne base64)
+      pdfBase64 = generateContractPDF(defaultContract, contractData, `contrat_${bookingRequest.firstName}_${bookingRequest.lastName}.pdf`)
+    }
     
     // Mettre à jour la demande avec l'URL du contrat
     await prisma.bookingRequest.update({

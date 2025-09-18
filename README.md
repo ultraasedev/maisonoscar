@@ -14,6 +14,22 @@ pnpm dev
 bun dev
 ```
 
+  Pour récupérer une clé API Google Places :
+
+  1. Aller sur Google Cloud Console : https://console.cloud.google.com/
+  2. Créer/sélectionner un projet
+  3. Activer les APIs :
+    - Aller dans "APIs & Services" > "Library"
+    - Chercher "Places API" et l'activer
+    - Chercher "Maps JavaScript API" et l'activer
+  4. Créer la clé :
+    - "APIs & Services" > "Credentials"
+    - "Create Credentials" > "API Key"
+  5. Configurer les restrictions (recommandé) :
+    - Restriction d'application : "HTTP referrers"
+    - Ajouter : localhost:3000/* et ton domaine de prod
+    - Restriction d'API : Places API + Maps JavaScript API
+
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.

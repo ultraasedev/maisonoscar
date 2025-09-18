@@ -38,11 +38,13 @@ import {
 } from 'lucide-react'
 import { useRooms, useRoomMutations } from '@/hooks/useRooms'
 import { Room } from '@/hooks/useRooms'
-import { RoomStatus } from '@prisma/client'
 import toast from 'react-hot-toast'
 import RoomModal from '@/components/admin/rooms/roommodal'
 
-// Configuration des statuts - Utilise maintenant RoomStatus de Prisma
+// Types pour les statuts des chambres
+type RoomStatus = 'AVAILABLE' | 'OCCUPIED' | 'MAINTENANCE' | 'UNAVAILABLE'
+
+// Configuration des statuts
 const statusConfig: Record<RoomStatus, {
   label: string
   color: string

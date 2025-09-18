@@ -95,6 +95,8 @@ export default function PaymentsContent() {
   useEffect(() => {
     // Charger les paiements
     fetchPayments()
+    // Charger les locataires
+    fetchTenants()
     // Simuler les rappels automatiques
     checkPaymentReminders()
   }, [])
@@ -120,6 +122,33 @@ export default function PaymentsContent() {
       toast.error('Erreur lors du chargement des paiements')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchTenants = async () => {
+    try {
+      // For now, we'll derive tenants from active bookings
+      // This could be moved to a dedicated API endpoint later
+      const response = await fetch('/api/bookings?status=ACTIVE')
+      const result = await response.json()
+
+      if (result.success) {
+        const tenantsData = result.data.map((booking: any) => ({
+          id: booking.user.id,
+          firstName: booking.user.firstName,
+          lastName: booking.user.lastName,
+          email: booking.user.email,
+          roomName: booking.room.name,
+          monthlyRent: booking.monthlyRent,
+          paymentDay: 5, // Default payment day
+          totalPaid: 0, // Will be calculated from payments
+          totalDue: 0, // Will be calculated from payments
+          status: 'ACTIVE' as const
+        }))
+        setTenants(tenantsData)
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des locataires:', error)
     }
   }
 
@@ -499,42 +528,73 @@ export default function PaymentsContent() {
         ) : (
           // Vue Locataires
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Exemple de carte locataire */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h3 className="font-semibold text-gray-900">Jean Dupont</h3>
-                  <p className="text-sm text-gray-500">Studio Confort - N°101</p>
-                </div>
-                <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 rounded">
-                  À jour
-                </span>
-              </div>
-              
-              <div className="space-y-2 mb-4">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Loyer mensuel</span>
-                  <span className="font-medium">450€</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Jour de paiement</span>
-                  <span className="font-medium">5 du mois</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Depuis le</span>
-                  <span className="font-medium">01/01/2024</span>
+            {tenants.length === 0 ? (
+              <div className="col-span-full">
+                <div className="text-center py-12">
+                  <User className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun locataire actuel</h3>
+                  <p className="text-gray-500">
+                    Les locataires apparaîtront ici une fois qu'ils auront une réservation active.
+                  </p>
                 </div>
               </div>
-              
-              <div className="flex gap-2">
-                <button className="flex-1 px-3 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors text-sm">
-                  Voir l'historique
-                </button>
-                <button className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                  <Mail className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
+            ) : (
+              tenants.map((tenant) => (
+                <div key={tenant.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h3 className="font-semibold text-gray-900">{tenant.firstName} {tenant.lastName}</h3>
+                      <p className="text-sm text-gray-500">{tenant.room?.name || 'Chambre non assignée'}</p>
+                    </div>
+                    <span className={`px-2 py-1 text-xs font-medium rounded ${
+                      tenant.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
+                      tenant.status === 'LATE' ? 'bg-red-100 text-red-700' :
+                      'bg-yellow-100 text-yellow-700'
+                    }`}>
+                      {tenant.status === 'ACTIVE' ? 'À jour' : tenant.status === 'LATE' ? 'En retard' : 'En attente'}
+                    </span>
+                  </div>
+
+                  <div className="space-y-2 mb-4">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Loyer mensuel</span>
+                      <span className="font-medium">{tenant.room?.price || 0}€</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Jour de paiement</span>
+                      <span className="font-medium">5 du mois</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Total payé</span>
+                      <span className="font-medium text-green-600">0€</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500">Total dû</span>
+                      <span className="font-medium text-red-600">0€</span>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        // Switch to payments view with this tenant's payments
+                        setViewMode('payments')
+                        setSearchQuery(`${tenant.firstName} ${tenant.lastName}`)
+                      }}
+                      className="flex-1 px-3 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors text-sm"
+                    >
+                      Voir l'historique
+                    </button>
+                    <button
+                      className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                      title="Envoyer un rappel"
+                    >
+                      <Mail className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         )}
       </div>

@@ -53,11 +53,48 @@ export async function POST(req: NextRequest) {
     if (hasTenantSignature && hasLandlordSignature) {
       await prisma.contract.update({
         where: { id: validatedData.contractId },
-        data: { 
+        data: {
           status: 'SIGNED',
           signedAt: new Date()
         }
       });
+
+      // Notifier les admins que le contrat a été entièrement signé
+      try {
+        const admins = await prisma.user.findMany({
+          where: { role: 'ADMIN' }
+        });
+
+        const { sendEmail } = await import('@/lib/email');
+
+        for (const admin of admins) {
+          await sendEmail(
+            admin.email,
+            '✅ Contrat signé - Maison Oscar',
+            `
+            <h2>🎉 Contrat entièrement signé !</h2>
+            <p>Bonjour,</p>
+            <p>Le contrat <strong>${validatedData.contractId}</strong> a été signé par toutes les parties.</p>
+
+            <p><strong>Signataire :</strong> ${validatedData.signerName} (${validatedData.signerEmail})</p>
+            <p><strong>Date de signature :</strong> ${new Date().toLocaleDateString('fr-FR')}</p>
+
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${process.env.NEXTAUTH_URL}/admin/contracts"
+                 style="background: #000; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; display: inline-block;">
+                📋 Voir les contrats
+              </a>
+            </div>
+
+            <p>Vous pouvez maintenant procéder aux prochaines étapes (dépôt de garantie, état des lieux, etc.)</p>
+
+            <p>Cordialement,<br>Système Maison Oscar</p>
+            `
+          );
+        }
+      } catch (error) {
+        console.error('Erreur notification admins signature:', error);
+      }
     }
 
     return NextResponse.json({

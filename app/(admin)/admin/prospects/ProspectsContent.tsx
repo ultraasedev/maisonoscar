@@ -2,14 +2,36 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { 
+import {
   Users, Search, Eye, Check, X, Clock, AlertCircle,
-  FileText, ChevronDown, ChevronRight,
+  FileText,
   Euro, RefreshCw, Loader2,
-  CheckCircle, XCircle, FileCheck, Edit2, Trash2, Send
+  CheckCircle, XCircle, FileCheck, Edit2, Trash2, Send, Download
 } from 'lucide-react'
 import { toast } from 'sonner'
 import DocumentViewer from '@/components/admin/DocumentViewer'
+import DeleteConfirmModal from '@/components/ui/DeleteConfirmModal'
+
+// Fonction pour traduire les noms de documents techniques en français
+const getDocumentLabel = (key: string): string => {
+  const labels: Record<string, string> = {
+    'idCard': 'Pièce d\'identité',
+    'currentAddressProof': 'Justificatif de domicile',
+    'taxNoticeN1': 'Avis d\'imposition N-1',
+    'taxNoticeN2': 'Avis d\'imposition N-2',
+    'payslips': 'Fiches de paie',
+    'workContract': 'Contrat de travail',
+    'schoolCertificate': 'Certificat de scolarité',
+    'apprenticeshipContract': 'Contrat d\'apprentissage',
+    'accountingReport': 'Bilan comptable',
+    'incomeProof': 'Justificatif de revenus',
+    'visaleAttestation': 'Attestation Visale',
+    'kbis': 'Extrait KBIS',
+    'addressProof': 'Justificatif d\'adresse',
+    'commitmentLetter': 'Lettre d\'engagement'
+  }
+  return labels[key] || key.replace(/([A-Z])/g, ' $1').trim()
+}
 
 interface BookingRequest {
   id: string
@@ -80,10 +102,12 @@ const statusConfig = {
   SUBMITTED: { label: 'Soumis', color: 'bg-blue-100 text-blue-700', icon: Send },
   IN_REVIEW: { label: 'En cours', color: 'bg-yellow-100 text-yellow-700', icon: Clock },
   INCOMPLETE: { label: 'Incomplet', color: 'bg-orange-100 text-orange-700', icon: AlertCircle },
-  APPROVED: { label: 'Approuvé', color: 'bg-green-100 text-green-700', icon: CheckCircle },
-  REJECTED: { label: 'Refusé', color: 'bg-red-100 text-red-700', icon: XCircle },
-  CONTRACT_SENT: { label: 'Contrat envoyé', color: 'bg-purple-100 text-purple-700', icon: FileText },
+  APPROVED: { label: 'Dossier validé', color: 'bg-green-100 text-green-700', icon: CheckCircle },
+  INSPECTION_SCHEDULED: { label: 'État des lieux programmé', color: 'bg-teal-100 text-teal-700', icon: Eye },
+  READY_FOR_CONTRACT: { label: 'Prêt pour contrat', color: 'bg-emerald-100 text-emerald-700', icon: FileText },
+  CONTRACT_SENT: { label: 'Contrat envoyé', color: 'bg-purple-100 text-purple-700', icon: Send },
   CONTRACT_SIGNED: { label: 'Contrat signé', color: 'bg-indigo-100 text-indigo-700', icon: FileCheck },
+  REJECTED: { label: 'Refusé', color: 'bg-red-100 text-red-700', icon: XCircle },
   DEPOSIT_PENDING: { label: 'Attente caution', color: 'bg-yellow-100 text-yellow-700', icon: Euro },
   COMPLETED: { label: 'Finalisé', color: 'bg-green-100 text-green-700', icon: Check }
 }
@@ -106,10 +130,13 @@ export default function ProspectsContent() {
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [showActionModal, setShowActionModal] = useState(false)
   const [showDocumentViewer, setShowDocumentViewer] = useState(false)
-  const [actionType, setActionType] = useState<'approve' | 'reject' | 'incomplete' | null>(null)
+  const [documentsToView, setDocumentsToView] = useState<any>(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [prospectToDelete, setProspectToDelete] = useState<BookingRequest | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [actionType, setActionType] = useState<'approve' | 'reject' | 'incomplete' | 'schedule_inspection' | 'ready_for_contract' | 'send_contract' | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
-  const [expandedRows, setExpandedRows] = useState<string[]>([])
 
   useEffect(() => {
     fetchProspects()
@@ -161,25 +188,72 @@ export default function ProspectsContent() {
     setFilteredProspects(filtered)
   }
 
-  const handleDelete = async (prospectId: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette demande ?')) {
-      return
-    }
-    
+  const handleDelete = (prospect: BookingRequest) => {
+    setProspectToDelete(prospect)
+    setShowDeleteModal(true)
+  }
+
+  const downloadDocument = (documentUrl: string, fileName: string, documentType: string) => {
     try {
-      const response = await fetch(`/api/booking-requests/${prospectId}`, {
+      // Créer un lien temporaire pour télécharger le fichier
+      const link = document.createElement('a')
+      link.href = documentUrl
+      link.download = `${fileName}_${documentType}_${Date.now()}.${getFileExtension(documentUrl)}`
+      link.target = '_blank'
+
+      // Ajouter le lien au DOM, cliquer et le supprimer
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+      toast.success(`Document "${documentType}" téléchargé`)
+    } catch (error) {
+      console.error('Erreur téléchargement:', error)
+      toast.error('Erreur lors du téléchargement du document')
+    }
+  }
+
+  const getFileExtension = (url: string) => {
+    // Extraire l'extension du fichier depuis l'URL ou data URL
+    if (url.startsWith('data:')) {
+      // Pour les data URLs, extraire le type MIME
+      const mimeMatch = url.match(/data:([^;]+)/)
+      if (mimeMatch) {
+        const mimeType = mimeMatch[1]
+        if (mimeType.includes('pdf')) return 'pdf'
+        if (mimeType.includes('image')) return 'jpg'
+        if (mimeType.includes('text')) return 'txt'
+      }
+      return 'file'
+    } else {
+      // Pour les URLs normales, extraire l'extension
+      const extension = url.split('.').pop()
+      return extension || 'file'
+    }
+  }
+
+  const confirmDelete = async () => {
+    if (!prospectToDelete) return
+
+    try {
+      setIsDeleting(true)
+      const response = await fetch(`/api/booking-requests/${prospectToDelete.id}`, {
         method: 'DELETE'
       })
-      
+
       if (!response.ok) {
         throw new Error('Erreur lors de la suppression')
       }
-      
+
       toast.success('Demande supprimée avec succès')
       fetchProspects()
+      setShowDeleteModal(false)
+      setProspectToDelete(null)
     } catch (error) {
       console.error('Erreur:', error)
       toast.error('Erreur lors de la suppression')
+    } finally {
+      setIsDeleting(false)
     }
   }
   
@@ -210,13 +284,6 @@ export default function ProspectsContent() {
     }
   }
 
-  const toggleRowExpansion = (id: string) => {
-    setExpandedRows(prev => 
-      prev.includes(id) 
-        ? prev.filter(rowId => rowId !== id)
-        : [...prev, id]
-    )
-  }
 
   const getAge = (birthDate: string) => {
     const birth = new Date(birthDate)
@@ -362,7 +429,6 @@ export default function ProspectsContent() {
                   {filteredProspects.map((prospect) => {
                     const status = statusConfig[prospect.status as keyof typeof statusConfig] || statusConfig.DRAFT
                     const StatusIcon = status.icon
-                    const isExpanded = expandedRows.includes(prospect.id)
                     const age = getAge(prospect.birthDate)
                     const isMinor = age < 18
                     
@@ -434,12 +500,6 @@ export default function ProspectsContent() {
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex items-center justify-end gap-2">
                             <button
-                              onClick={() => toggleRowExpansion(prospect.id)}
-                              className="p-1 hover:bg-gray-100 rounded transition-colors"
-                            >
-                              {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                            </button>
-                            <button
                               onClick={() => {
                                 setSelectedProspect(prospect)
                                 setShowDetailsModal(true)
@@ -457,6 +517,7 @@ export default function ProspectsContent() {
                                     setShowActionModal(true)
                                   }}
                                   className="p-1 hover:bg-green-100 rounded transition-colors text-green-600"
+                                  title="Valider le dossier"
                                 >
                                   <Check className="w-4 h-4" />
                                 </button>
@@ -467,14 +528,57 @@ export default function ProspectsContent() {
                                     setShowActionModal(true)
                                   }}
                                   className="p-1 hover:bg-red-100 rounded transition-colors text-red-600"
+                                  title="Refuser le dossier"
                                 >
                                   <X className="w-4 h-4" />
                                 </button>
                               </>
                             )}
+
+                            {prospect.status === 'APPROVED' && (
+                              <button
+                                onClick={() => {
+                                  setSelectedProspect(prospect)
+                                  setActionType('schedule_inspection')
+                                  setShowActionModal(true)
+                                }}
+                                className="p-1 hover:bg-teal-100 rounded transition-colors text-teal-600"
+                                title="Programmer état des lieux"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                            )}
+
+                            {prospect.status === 'INSPECTION_SCHEDULED' && (
+                              <button
+                                onClick={() => {
+                                  setSelectedProspect(prospect)
+                                  setActionType('ready_for_contract')
+                                  setShowActionModal(true)
+                                }}
+                                className="p-1 hover:bg-emerald-100 rounded transition-colors text-emerald-600"
+                                title="Marquer comme prêt pour contrat"
+                              >
+                                <FileText className="w-4 h-4" />
+                              </button>
+                            )}
+
+                            {prospect.status === 'READY_FOR_CONTRACT' && (
+                              <button
+                                onClick={() => {
+                                  setSelectedProspect(prospect)
+                                  setActionType('send_contract')
+                                  setShowActionModal(true)
+                                }}
+                                className="p-1 hover:bg-purple-100 rounded transition-colors text-purple-600"
+                                title="Envoyer le contrat"
+                              >
+                                <Send className="w-4 h-4" />
+                              </button>
+                            )}
                             {(prospect.status === 'REJECTED' || prospect.status === 'DRAFT') && (
                               <button
-                                onClick={() => handleDelete(prospect.id)}
+                                onClick={() => handleDelete(prospect)}
                                 className="p-1 hover:bg-red-100 rounded transition-colors text-red-600"
                                 title="Supprimer la demande"
                               >
@@ -500,19 +604,19 @@ export default function ProspectsContent() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4"
             onClick={(e) => e.target === e.currentTarget && setShowDetailsModal(false)}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+              className="bg-white rounded-2xl sm:rounded-3xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col mx-2 sm:mx-0"
             >
               {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900">
+                  <h2 className="text-lg sm:text-2xl font-bold text-gray-900">
                     Dossier de {selectedProspect.firstName} {selectedProspect.lastName}
                   </h2>
                   <p className="text-sm text-gray-500 mt-1">
@@ -528,7 +632,7 @@ export default function ProspectsContent() {
               </div>
 
               {/* Content */}
-              <div className="flex-1 overflow-y-auto p-6">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6">
                 <div className="space-y-6">
                   {/* Statut actuel */}
                   <div className="bg-gray-50 rounded-lg p-4">
@@ -561,7 +665,7 @@ export default function ProspectsContent() {
                   {/* Chambre demandée */}
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-3">Chambre demandée</h3>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <p className="text-sm text-gray-500">Chambre</p>
                         <p className="text-sm font-medium">{selectedProspect.room.name}</p>
@@ -584,7 +688,7 @@ export default function ProspectsContent() {
                   {/* Informations personnelles */}
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-3">Informations personnelles</h3>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <p className="text-sm text-gray-500">Nom complet</p>
                         <p className="text-sm font-medium">{selectedProspect.firstName} {selectedProspect.lastName}</p>
@@ -617,7 +721,7 @@ export default function ProspectsContent() {
                   {/* Situation professionnelle */}
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-3">Situation professionnelle</h3>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <p className="text-sm text-gray-500">Statut</p>
                         <p className="text-sm font-medium">
@@ -649,7 +753,7 @@ export default function ProspectsContent() {
                   {selectedProspect.hasGuarantor && (
                     <div>
                       <h3 className="font-semibold text-gray-900 mb-3">Garant</h3>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <p className="text-sm text-gray-500">Type</p>
                           <p className="text-sm font-medium">{selectedProspect.guarantorType}</p>
@@ -670,9 +774,12 @@ export default function ProspectsContent() {
                   <div>
                     <div className="flex items-center justify-between mb-3">
                       <h3 className="font-semibold text-gray-900">Documents fournis</h3>
-                      {selectedProspect.documents && Object.keys(selectedProspect.documents).some(key => selectedProspect.documents[key]) && (
+                      {selectedProspect.documents && Object.keys(selectedProspect.documents.principal || selectedProspect.documents).some(key => selectedProspect.documents.principal ? selectedProspect.documents.principal[key] : selectedProspect.documents[key]) && (
                         <button
-                          onClick={() => setShowDocumentViewer(true)}
+                          onClick={() => {
+                            setDocumentsToView(selectedProspect.documents)
+                            setShowDocumentViewer(true)
+                          }}
                           className="flex items-center gap-2 px-3 py-1 text-sm bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
                         >
                           <Eye className="w-4 h-4" />
@@ -680,34 +787,173 @@ export default function ProspectsContent() {
                         </button>
                       )}
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      {Object.entries(selectedProspect.documents || {}).map(([key, value]) => (
-                        <div key={key} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                          <div className="flex items-center gap-2">
-                            <FileText className="w-4 h-4 text-gray-500" />
-                            <span className="text-sm font-medium text-gray-700">
-                              {key.replace(/([A-Z])/g, ' $1').trim()}
-                            </span>
+                    <div className="space-y-4">
+                      {/* Documents du locataire principal */}
+                      {selectedProspect.documents && (
+                        selectedProspect.documents.principal ?
+                          Object.keys(selectedProspect.documents.principal).length > 0 :
+                          Object.keys(selectedProspect.documents).length > 0
+                      ) && (
+                        <div>
+                          <h4 className="text-sm font-semibold text-gray-800 mb-2">Documents du locataire principal</h4>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {Object.entries(selectedProspect.documents.principal || selectedProspect.documents).map(([key, value]) =>
+                              value && key !== 'roommates' && key !== 'guarantors' ? (
+                                <div key={key} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                                  <div className="flex items-center gap-2">
+                                    <FileText className="w-3 h-3 text-gray-500" />
+                                    <span className="text-xs font-medium text-gray-700">
+                                      {getDocumentLabel(key)}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      onClick={() => {
+                                        setDocumentsToView({principal: selectedProspect.documents.principal || selectedProspect.documents})
+                                        setShowDocumentViewer(true)
+                                      }}
+                                      className="p-1 hover:bg-gray-200 rounded transition-colors"
+                                      title="Voir le document"
+                                    >
+                                      <Eye className="w-3 h-3 text-green-600" />
+                                    </button>
+                                    <button
+                                      onClick={() => downloadDocument(
+                                        value as string,
+                                        `${selectedProspect.firstName}_${selectedProspect.lastName}`,
+                                        getDocumentLabel(key)
+                                      )}
+                                      className="p-1 hover:bg-gray-200 rounded transition-colors"
+                                      title="Télécharger le document"
+                                    >
+                                      <Download className="w-3 h-3 text-blue-600" />
+                                    </button>
+                                    <CheckCircle className="w-3 h-3 text-green-500" />
+                                  </div>
+                                </div>
+                              ) : null
+                            )}
                           </div>
-                          {Boolean(value) && (
-                            <CheckCircle className="w-4 h-4 text-green-500" />
-                          )}
                         </div>
-                      ))}
+                      )}
+
+                      {/* Documents des colocataires */}
+                      {selectedProspect.documents?.roommates && selectedProspect.documents.roommates.length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-semibold text-gray-800 mb-2">Colocataires</h4>
+                          {selectedProspect.documents.roommates.map((roommate: any, index: number) => (
+                            Object.keys(roommate || {}).length > 0 && (
+                              <div key={index} className="mb-2">
+                                <p className="text-xs text-gray-600 mb-1">Colocataire {index + 1}</p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                  {Object.entries(roommate || {}).map(([key, value]) =>
+                                    value ? (
+                                      <div key={key} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                                        <div className="flex items-center gap-2">
+                                          <FileText className="w-3 h-3 text-gray-500" />
+                                          <span className="text-xs font-medium text-gray-700">
+                                            {getDocumentLabel(key)}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                          <button
+                                            onClick={() => {
+                                              setDocumentsToView({roommates: [roommate]})
+                                              setShowDocumentViewer(true)
+                                            }}
+                                            className="p-1 hover:bg-gray-200 rounded transition-colors"
+                                            title="Voir le document"
+                                          >
+                                            <Eye className="w-3 h-3 text-green-600" />
+                                          </button>
+                                          <button
+                                            onClick={() => downloadDocument(
+                                              value as string,
+                                              `Colocataire_${index + 1}`,
+                                              getDocumentLabel(key)
+                                            )}
+                                            className="p-1 hover:bg-gray-200 rounded transition-colors"
+                                            title="Télécharger le document"
+                                          >
+                                            <Download className="w-3 h-3 text-blue-600" />
+                                          </button>
+                                          <CheckCircle className="w-3 h-3 text-green-500" />
+                                        </div>
+                                      </div>
+                                    ) : null
+                                  )}
+                                </div>
+                              </div>
+                            )
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Documents des garants */}
+                      {selectedProspect.documents?.guarantors && selectedProspect.documents.guarantors.length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-semibold text-gray-800 mb-2">Garants</h4>
+                          {selectedProspect.documents.guarantors.map((guarantor: any, index: number) => (
+                            Object.keys(guarantor || {}).length > 0 && (
+                              <div key={index} className="mb-2">
+                                <p className="text-xs text-gray-600 mb-1">Garant {index + 1}</p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                  {Object.entries(guarantor || {}).map(([key, value]) =>
+                                    value ? (
+                                      <div key={key} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                                        <div className="flex items-center gap-2">
+                                          <FileText className="w-3 h-3 text-gray-500" />
+                                          <span className="text-xs font-medium text-gray-700">
+                                            {getDocumentLabel(key)}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                          <button
+                                            onClick={() => {
+                                              setDocumentsToView({guarantors: [guarantor]})
+                                              setShowDocumentViewer(true)
+                                            }}
+                                            className="p-1 hover:bg-gray-200 rounded transition-colors"
+                                            title="Voir le document"
+                                          >
+                                            <Eye className="w-3 h-3 text-green-600" />
+                                          </button>
+                                          <button
+                                            onClick={() => downloadDocument(
+                                              value as string,
+                                              `Garant_${index + 1}`,
+                                              getDocumentLabel(key)
+                                            )}
+                                            className="p-1 hover:bg-gray-200 rounded transition-colors"
+                                            title="Télécharger le document"
+                                          >
+                                            <Download className="w-3 h-3 text-blue-600" />
+                                          </button>
+                                          <CheckCircle className="w-3 h-3 text-green-500" />
+                                        </div>
+                                      </div>
+                                    ) : null
+                                  )}
+                                </div>
+                              </div>
+                            )
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Footer */}
-              <div className="flex items-center justify-between p-6 border-t border-gray-200">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-4 sm:p-6 border-t border-gray-200">
                 <button
                   onClick={() => setShowDetailsModal(false)}
-                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="px-4 py-2 text-sm sm:text-base text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors w-full sm:w-auto"
                 >
                   Fermer
                 </button>
-                <div className="flex gap-3">
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                   {selectedProspect.status === 'SUBMITTED' && (
                     <>
                       <button
@@ -715,7 +961,7 @@ export default function ProspectsContent() {
                           setActionType('incomplete')
                           setShowActionModal(true)
                         }}
-                        className="px-4 py-2 text-orange-700 bg-orange-100 rounded-lg hover:bg-orange-200 transition-colors"
+                        className="px-4 py-2 text-sm sm:text-base text-orange-700 bg-orange-100 rounded-lg hover:bg-orange-200 transition-colors"
                       >
                         Marquer incomplet
                       </button>
@@ -724,7 +970,7 @@ export default function ProspectsContent() {
                           setActionType('reject')
                           setShowActionModal(true)
                         }}
-                        className="px-4 py-2 text-red-700 bg-red-100 rounded-lg hover:bg-red-200 transition-colors"
+                        className="px-4 py-2 text-sm sm:text-base text-red-700 bg-red-100 rounded-lg hover:bg-red-200 transition-colors"
                       >
                         Refuser
                       </button>
@@ -733,7 +979,7 @@ export default function ProspectsContent() {
                           setActionType('approve')
                           setShowActionModal(true)
                         }}
-                        className="px-4 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
+                        className="px-4 py-2 text-sm sm:text-base text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
                       >
                         Approuver
                       </button>
@@ -848,11 +1094,25 @@ export default function ProspectsContent() {
       {/* Document Viewer */}
       {selectedProspect && (
         <DocumentViewer
-          documents={selectedProspect.documents}
+          documents={documentsToView}
           isOpen={showDocumentViewer}
           onClose={() => setShowDocumentViewer(false)}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false)
+          setProspectToDelete(null)
+        }}
+        onConfirm={confirmDelete}
+        title="Supprimer la demande"
+        description="Êtes-vous sûr de vouloir supprimer cette demande de réservation ?"
+        itemName={prospectToDelete ? `${prospectToDelete.firstName} ${prospectToDelete.lastName}` : ''}
+        isLoading={isDeleting}
+      />
     </div>
   )
 }

@@ -26,6 +26,13 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import ImageUpload from '@/components/ui/ImageUpload'
+import dynamic from 'next/dynamic'
+
+// Import dynamique de l'éditeur riche
+const RichTextEditor = dynamic(
+  () => import('@/components/RichTextEditor'),
+  { ssr: false }
+)
 
 interface TabItem {
   id: string
@@ -384,9 +391,9 @@ export default function CMSContent() {
   })
   const [testimonials, setTestimonials] = useState<any[]>([])
   const [editingContent, setEditingContent] = useState<any>(null)
-  const [editingTestimonial, setEditingTestimonial] = useState<Testimonial | null>(null)
+  // const [editingTestimonial, setEditingTestimonial] = useState<Testimonial | null>(null) // Supprimé
   const [showContentModal, setShowContentModal] = useState(false)
-  const [showTestimonialModal, setShowTestimonialModal] = useState(false)
+  // const [showTestimonialModal, setShowTestimonialModal] = useState(false) // Supprimé
   
   // Générer le contenu par défaut des mentions légales
   const getDefaultMentionsContent = (settings: any) => {
@@ -708,40 +715,7 @@ export default function CMSContent() {
     }
   }
   
-  const handleSaveTestimonial = async () => {
-    setSaving(true)
-    try {
-      const method = editingTestimonial?.id ? 'PUT' : 'POST'
-      const url = editingTestimonial?.id 
-        ? `/api/cms/testimonials/${editingTestimonial.id}`
-        : '/api/cms/testimonials'
-        
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editingTestimonial)
-      })
-      
-      if (response.ok) {
-        toast.success(editingTestimonial?.id ? 'Témoignage modifié' : 'Témoignage ajouté')
-        setShowTestimonialModal(false)
-        setEditingTestimonial(null)
-        
-        // Recharger les témoignages
-        const testimonialsRes = await fetch('/api/cms/testimonials')
-        const testimonialsData = await testimonialsRes.json()
-        if (testimonialsData.success) {
-          setTestimonials(testimonialsData.data)
-        }
-      } else {
-        throw new Error('Erreur lors de la sauvegarde')
-      }
-    } catch (error) {
-      toast.error('Erreur lors de la sauvegarde')
-    } finally {
-      setSaving(false)
-    }
-  }
+  // const handleSaveTestimonial = async () => { ... } // Supprimé - édition désactivée
   
   const handleDeleteTestimonial = async (id: string) => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer ce témoignage ?')) return
@@ -1269,10 +1243,10 @@ export default function CMSContent() {
 
                   <textarea
                     id="mentions-content"
-                    value={mentionsLegales.content}
+                    value={(mentionsLegales.content || '').replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')}
                     onChange={(e) => setMentionsLegales(prev => ({ ...prev, content: e.target.value }))}
                     rows={20}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-b-lg focus:ring-2 focus:ring-black focus:border-transparent font-mono text-sm"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-b-lg focus:ring-2 focus:ring-black focus:border-transparent text-sm"
                     placeholder="Contenu des mentions légales..."
                   />
 
@@ -2011,7 +1985,7 @@ export default function CMSContent() {
                     value={socialLinks.facebookUrl}
                     onChange={(e) => setSocialLinks(prev => ({ ...prev, facebookUrl: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                    placeholder="https://facebook.com/maisonoscar"
+                    placeholder="URL de la page Facebook officielle"
                   />
                 </div>
                 
@@ -2025,7 +1999,7 @@ export default function CMSContent() {
                     value={socialLinks.instagramUrl}
                     onChange={(e) => setSocialLinks(prev => ({ ...prev, instagramUrl: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                    placeholder="https://instagram.com/maisonoscar"
+                    placeholder="URL du compte Instagram officiel"
                   />
                 </div>
                 
@@ -2039,7 +2013,7 @@ export default function CMSContent() {
                     value={socialLinks.linkedinUrl}
                     onChange={(e) => setSocialLinks(prev => ({ ...prev, linkedinUrl: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                    placeholder="https://linkedin.com/company/maisonoscar"
+                    placeholder="URL de la page LinkedIn officielle"
                   />
                 </div>
                 
@@ -2053,7 +2027,7 @@ export default function CMSContent() {
                     value={socialLinks.twitterUrl}
                     onChange={(e) => setSocialLinks(prev => ({ ...prev, twitterUrl: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                    placeholder="https://twitter.com/maisonoscar"
+                    placeholder="URL du compte Twitter/X officiel"
                   />
                 </div>
               </div>
@@ -2084,18 +2058,10 @@ export default function CMSContent() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-semibold">Témoignages</h3>
-                <p className="text-sm text-gray-600">Gérez les témoignages affichés sur le site</p>
+                <p className="text-sm text-gray-600">Supprimez les témoignages indésirables (création via l'interface publique)</p>
               </div>
-              <button
-                onClick={() => {
-                  setEditingTestimonial(null)
-                  setShowTestimonialModal(true)
-                }}
-                className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                Ajouter
-              </button>
+              {/* Ajout de témoignages désactivé - utiliser l'interface publique */}
+              <span className="text-sm text-gray-500 italic">Suppression uniquement - création via l'interface publique</span>
             </div>
 
             {/* Liste des témoignages */}
@@ -2138,15 +2104,7 @@ export default function CMSContent() {
                     </span>
                     
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => {
-                          setEditingTestimonial(testimonial)
-                          setShowTestimonialModal(true)
-                        }}
-                        className="p-1 hover:bg-gray-100 rounded transition-colors"
-                      >
-                        <Edit2 className="w-4 h-4 text-gray-600" />
-                      </button>
+                      {/* Édition désactivée - suppression uniquement */}
                       <button
                         onClick={() => handleDeleteTestimonial(testimonial.id)}
                         className="p-1 hover:bg-red-100 rounded transition-colors"
@@ -2169,141 +2127,7 @@ export default function CMSContent() {
               </div>
             )}
             
-            {/* Modal d'édition */}
-            {showTestimonialModal && (
-              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                <motion.div
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className="bg-white rounded-2xl max-w-lg w-full p-6"
-                >
-                  <h3 className="text-xl font-bold mb-4">
-                    {editingTestimonial?.id ? 'Modifier le témoignage' : 'Ajouter un témoignage'}
-                  </h3>
-                  
-                  <form onSubmit={(e) => {
-                    e.preventDefault()
-                    handleSaveTestimonial()
-                  }}>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Nom
-                        </label>
-                        <input
-                          type="text"
-                          value={editingTestimonial?.name || ''}
-                          onChange={(e) => setEditingTestimonial(prev => prev ? ({
-                            ...prev,
-                            name: e.target.value
-                          }) : null)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                          required
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Rôle / Formation
-                        </label>
-                        <input
-                          type="text"
-                          value={editingTestimonial?.role || ''}
-                          onChange={(e) => setEditingTestimonial(prev => prev ? ({
-                            ...prev,
-                            role: e.target.value
-                          }) : null)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                          placeholder="Étudiant en informatique"
-                          required
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Témoignage
-                        </label>
-                        <textarea
-                          value={editingTestimonial?.content || ''}
-                          onChange={(e) => setEditingTestimonial(prev => prev ? ({
-                            ...prev,
-                            content: e.target.value
-                          }) : null)}
-                          rows={4}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                          required
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Note
-                        </label>
-                        <div className="flex items-center gap-2">
-                          {[1, 2, 3, 4, 5].map((rating) => (
-                            <button
-                              key={rating}
-                              type="button"
-                              onClick={() => setEditingTestimonial(prev => prev ? ({
-                                ...prev,
-                                rating
-                              }) : null)}
-                              className={`text-2xl ${
-                                rating <= (editingTestimonial?.rating || 0)
-                                  ? 'text-yellow-400'
-                                  : 'text-gray-300'
-                              } hover:text-yellow-400 transition-colors`}
-                            >
-                              ★
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center">
-                        <input
-                          type="checkbox"
-                          id="isActive"
-                          checked={editingTestimonial?.isActive ?? true}
-                          onChange={(e) => setEditingTestimonial(prev => prev ? ({
-                            ...prev,
-                            isActive: e.target.checked
-                          }) : null)}
-                          className="mr-2"
-                        />
-                        <label htmlFor="isActive" className="text-sm text-gray-700">
-                          Témoignage actif (affiché sur le site)
-                        </label>
-                      </div>
-                    </div>
-                    
-                    <div className="flex justify-end gap-3 mt-6">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowTestimonialModal(false)
-                          setEditingTestimonial(null)
-                        }}
-                        className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
-                      >
-                        Annuler
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={saving}
-                        className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 disabled:opacity-50"
-                      >
-                        {saving ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          editingTestimonial?.id ? 'Mettre à jour' : 'Ajouter'
-                        )}
-                      </button>
-                    </div>
-                  </form>
-                </motion.div>
-              </div>
-            )}
+            {/* Modal d'édition supprimé - suppression uniquement autorisée */}
           </div>
         )
         

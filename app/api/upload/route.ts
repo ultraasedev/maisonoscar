@@ -18,12 +18,26 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Vérifier le type de fichier
-    if (!file.type.startsWith('image/')) {
-      return NextResponse.json(
-        { success: false, error: 'Le fichier doit être une image' },
-        { status: 400 }
-      )
+    // Vérifier le type de fichier selon le type d'upload
+    if (type === 'documents') {
+      const allowedTypes = [
+        'image/jpeg', 'image/jpg', 'image/png', 'image/webp',
+        'application/pdf'
+      ]
+      if (!allowedTypes.includes(file.type)) {
+        return NextResponse.json(
+          { success: false, error: 'Format non autorisé. Seuls les images (JPG, PNG, WebP) et PDF sont acceptés.' },
+          { status: 400 }
+        )
+      }
+    } else {
+      // Pour les autres types (images de chambres, etc.), garder l'ancienne logique
+      if (!file.type.startsWith('image/')) {
+        return NextResponse.json(
+          { success: false, error: 'Le fichier doit être une image' },
+          { status: 400 }
+        )
+      }
     }
 
     // Limiter la taille à 5MB

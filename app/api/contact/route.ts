@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
-import { sendContactNotification } from '@/lib/email'
+import { sendContactNotification, sendEmail } from '@/lib/email'
+import { contactResponseTemplate } from '@/lib/email-templates'
 import { rateLimitConfigs } from '@/lib/rate-limit'
 
 // Schema de validation pour le message de contact
@@ -113,11 +114,23 @@ export async function POST(request: NextRequest) {
       }
     })
     
-    // TODO: Envoyer un email de notification à l'admin
-    // await sendNotificationEmail(message)
-    
-    // TODO: Envoyer un email de confirmation à l'utilisateur
-    // await sendConfirmationEmail(message)
+    // Envoyer un email de notification à tous les admins de la plateforme
+    try {
+      await sendContactNotification({
+        contactData: {
+          firstName: validatedData.firstName,
+          lastName: validatedData.lastName,
+          email: validatedData.email,
+          phone: validatedData.phone,
+          subject: validatedData.subject,
+          message: validatedData.message,
+          type: validatedData.type || 'QUESTION'
+        }
+      })
+    } catch (emailError) {
+      console.error('Erreur envoi email admin:', emailError)
+      // Ne pas faire échouer la création du message si l'email échoue
+    }
     
     return NextResponse.json({
       success: true,
@@ -164,17 +177,40 @@ export async function PATCH(request: NextRequest) {
     const message = await prisma.contact.update({
       where: { id },
       data: {
-        status: body.status,
+        status: body.status || 'RESPONDED',
         adminResponse: body.response,
         respondedAt: body.response ? new Date() : undefined,
         respondedBy: body.respondedBy
       }
     })
     
-    // TODO: Si une réponse est fournie, envoyer un email à l'utilisateur
-    // if (body.response) {
-    //   await sendResponseEmail(message)
-    // }
+    // Si une réponse est fournie, envoyer un email à l'utilisateur
+    if (body.response && body.response.trim().length > 0) {
+      try {
+        const user = await prisma.contact.findUnique({
+          where: { id },
+          select: { email: true, firstName: true, lastName: true, subject: true }
+        })
+
+        if (user) {
+          const html = contactResponseTemplate({
+            firstName: user.firstName,
+            lastName: user.lastName,
+            subject: user.subject,
+            response: body.response
+          })
+
+          await sendEmail(
+            user.email,
+            `Re: ${user.subject} - Réponse de Maison Oscar`,
+            html
+          )
+        }
+      } catch (emailError) {
+        console.error('Erreur envoi email réponse:', emailError)
+        // Ne pas faire échouer la mise à jour si l'email échoue
+      }
+    }
     
     return NextResponse.json({
       success: true,

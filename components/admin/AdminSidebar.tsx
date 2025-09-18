@@ -5,18 +5,19 @@ import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
-import { 
-  LayoutDashboard, 
-  Home, 
-  Users, 
-  Calendar, 
-  CreditCard, 
-  MessageSquare, 
+import {
+  LayoutDashboard,
+  Home,
+  Users,
+  Calendar,
+  CreditCard,
+  MessageSquare,
   Settings,
   X,
   Shield,
   FileText,
-  Edit3
+  Edit3,
+  PenTool
 } from 'lucide-react'
 
 const navigation = [
@@ -54,6 +55,11 @@ const navigation = [
     name: 'Contrats',
     href: '/admin/contracts',
     icon: FileText
+  },
+  {
+    name: 'Signatures',
+    href: '/admin/signatures',
+    icon: PenTool
   },
   {
     name: 'Gestionnaire',

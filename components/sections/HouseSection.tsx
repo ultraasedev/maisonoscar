@@ -6,6 +6,7 @@ import { useRef, useState, useEffect } from 'react';
 
 const defaultContent = {
   title: 'Notre maison à Bruz',
+  subtitle: undefined as string | undefined,
   description: 'Une maison moderne de 180m² entièrement rénovée, située dans un quartier calme à 15 minutes de Rennes en transport.',
   features: [
     {
@@ -27,7 +28,9 @@ const defaultContent = {
   ],
   address: '123 rue de la République, 35170 Bruz',
   virtualTourUrl: 'https://my.matterport.com/show/?m=example', // URL par défaut
-  isVirtualTourActive: true
+  isVirtualTourActive: true,
+  cmsFeatures: undefined as any[] | undefined,
+  amenities: undefined as string[] | undefined
 };
 
 const fadeInUp = {
@@ -81,32 +84,76 @@ const houseFeatures = [
 
 // Removed bike amenity as requested
 
-const galleryImages = [
+// Images par défaut en cas d'échec de chargement
+const defaultGalleryImages = [
   {
-    src: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?q=80&w=1000',
-    alt: 'Façade Maison Oscar Bruz',
+    src: '/images/house/salon-principal.jpg',
+    alt: 'Salon principal Maison Oscar Bruz',
     className: 'lg:col-span-2 lg:row-span-2'
   },
   {
-    src: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?q=80&w=500',
-    alt: 'Salon moderne',
+    src: '/images/house/cuisine-moderne.jpg',
+    alt: 'Cuisine moderne équipée',
     className: ''
   },
   {
-    src: 'https://images.unsplash.com/photo-1565538810643-b5bdb714032a?q=80&w=500',
-    alt: 'Cuisine équipée',
+    src: '/images/house/chambre-cosy.jpg',
+    alt: 'Chambre cosy',
     className: ''
   },
   {
-    src: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?q=80&w=800',
-    alt: 'Jardin privatif',
+    src: '/images/house/jardin-terrasse.jpg',
+    alt: 'Jardin et terrasse',
     className: 'md:col-span-2'
+  },
+  {
+    src: '/images/house/salle-de-bain.jpg',
+    alt: 'Salle de bain moderne',
+    className: ''
+  },
+  {
+    src: '/images/house/espace-travail.jpg',
+    alt: 'Espace de travail',
+    className: ''
   }
 ];
 
-const GalleryModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
+const GalleryModal = ({
+  isOpen,
+  onClose,
+  images
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  images: Array<{ src: string; alt: string; className?: string }>;
+}) => {
   const [currentImage, setCurrentImage] = useState(0);
-  
+
+  // Navigation clavier
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (!isOpen) return;
+
+      switch (e.key) {
+        case 'ArrowLeft':
+          e.preventDefault();
+          setCurrentImage((prev) => (prev - 1 + images.length) % images.length);
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          setCurrentImage((prev) => (prev + 1) % images.length);
+          break;
+        case 'Escape':
+          e.preventDefault();
+          onClose();
+          break;
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyPress);
+    return () => document.removeEventListener('keydown', handleKeyPress);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
@@ -126,20 +173,20 @@ const GalleryModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
       >
         <div className="relative">
           <img
-            src={galleryImages[currentImage].src}
-            alt={galleryImages[currentImage].alt}
+            src={images[currentImage].src}
+            alt={images[currentImage].alt}
             className="w-full h-auto rounded-2xl max-h-[80vh] object-contain"
           />
-          
+
           {/* Navigation */}
           <button
-            onClick={() => setCurrentImage((prev) => (prev - 1 + galleryImages.length) % galleryImages.length)}
+            onClick={() => setCurrentImage((prev) => (prev - 1 + images.length) % images.length)}
             className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors text-black font-bold text-lg"
           >
             ←
           </button>
           <button
-            onClick={() => setCurrentImage((prev) => (prev + 1) % galleryImages.length)}
+            onClick={() => setCurrentImage((prev) => (prev + 1) % images.length)}
             className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors text-black font-bold text-lg"
           >
             →
@@ -155,7 +202,7 @@ const GalleryModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
           
           {/* Indicators */}
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex space-x-2">
-            {galleryImages.map((_, index) => (
+            {images.map((_, index) => (
               <button
                 key={index}
                 onClick={() => setCurrentImage(index)}
@@ -169,7 +216,7 @@ const GalleryModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
           {/* Caption */}
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-8 rounded-b-2xl">
             <p className="text-white text-lg font-medium text-center">
-              {galleryImages[currentImage].alt}
+              {images[currentImage].alt}
             </p>
           </div>
         </div>
@@ -183,6 +230,7 @@ export const HouseSection = () => {
   const [showGallery, setShowGallery] = useState(false);
   const [content, setContent] = useState(defaultContent);
   const [galleryStartIndex, setGalleryStartIndex] = useState(0);
+  const [galleryImages, setGalleryImages] = useState(defaultGalleryImages);
   const [virtualTourConfig, setVirtualTourConfig] = useState({
     url: '',
     isActive: true
@@ -196,10 +244,32 @@ export const HouseSection = () => {
         if (response.ok) {
           const data = await response.json();
           if (data.success && data.data?.house) {
+            const houseData = data.data.house;
             setContent({
               ...defaultContent,
-              ...data.data.house
+              title: houseData.title || defaultContent.title,
+              description: houseData.description || defaultContent.description,
+              // Map CMS features to component format if they exist
+              ...(houseData.subtitle && { subtitle: houseData.subtitle }),
+              ...(houseData.features && { cmsFeatures: houseData.features }),
+              ...(houseData.amenities && { amenities: houseData.amenities })
             });
+          }
+        }
+
+        // Charger les images de la maison depuis le CMS
+        const houseImagesResponse = await fetch('/api/cms/house-images');
+        if (houseImagesResponse.ok) {
+          const houseImagesData = await houseImagesResponse.json();
+          if (houseImagesData.success && houseImagesData.data?.length > 0) {
+            // Convertir le format CMS vers le format galerie avec des classes responsives
+            const cmsImages = houseImagesData.data.map((img: any, index: number) => ({
+              src: img.url,
+              alt: img.title || img.description || `Image ${index + 1} de la maison`,
+              className: index === 0 ? 'lg:col-span-2 lg:row-span-2' :
+                         index === 3 ? 'md:col-span-2' : ''
+            }));
+            setGalleryImages(cmsImages);
           }
         }
         
@@ -237,6 +307,11 @@ export const HouseSection = () => {
           <motion.div variants={fadeInUp} className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
               {content.title}
+              {content.subtitle && (
+                <span className="block text-3xl md:text-4xl text-gray-600 font-normal mt-2">
+                  {content.subtitle}
+                </span>
+              )}
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
               {content.description}
@@ -346,7 +421,11 @@ export const HouseSection = () => {
       </motion.section>
 
       {/* Gallery Modal */}
-      <GalleryModal isOpen={showGallery} onClose={() => setShowGallery(false)} />
+      <GalleryModal
+        isOpen={showGallery}
+        onClose={() => setShowGallery(false)}
+        images={galleryImages}
+      />
     </>
   );
 };

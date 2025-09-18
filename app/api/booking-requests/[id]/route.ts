@@ -10,7 +10,7 @@ import { z } from 'zod'
 const UpdateStatusSchema = z.object({
   status: z.enum(['IN_REVIEW', 'INCOMPLETE', 'APPROVED', 'REJECTED', 'CONTRACT_SENT', 'CONTRACT_SIGNED', 'DEPOSIT_PENDING', 'COMPLETED']),
   reviewNotes: z.string().optional(),
-  rejectionReason: z.string().optional()
+  rejectionReason: z.string().optional().nullable()
 })
 
 // GET - Récupérer une demande spécifique
@@ -74,7 +74,18 @@ export async function PUT(
     }
     
     const body = await request.json()
-    const validatedData = UpdateStatusSchema.parse(body)
+    console.log('Received body:', body)
+
+    let validatedData
+    try {
+      validatedData = UpdateStatusSchema.parse(body)
+    } catch (error) {
+      console.error('Validation error:', error)
+      return NextResponse.json(
+        { success: false, error: 'Données invalides', details: error },
+        { status: 400 }
+      )
+    }
     
     // Récupérer la demande actuelle
     const currentRequest = await prisma.bookingRequest.findUnique({
@@ -105,11 +116,67 @@ export async function PUT(
     
     // Envoyer des emails selon le nouveau statut
     if (validatedData.status === 'APPROVED') {
-      // TODO: Envoyer email d'approbation avec contrat
+      // Envoyer seulement un email de félicitations (pas de génération automatique de contrat)
+      try {
+        // Importer sendEmail
+        const { sendEmail } = await import('@/lib/email')
+
+        // Envoyer l'email au candidat
+        await sendEmail(
+          currentRequest.email,
+          'Félicitations ! Votre dossier a été approuvé',
+          `
+          <h2>🎉 Félicitations ${currentRequest.firstName} !</h2>
+          <p>Votre dossier de candidature pour la chambre <strong>${currentRequest.room.name}</strong> a été approuvé !</p>
+
+          <p>Notre équipe va maintenant préparer votre contrat de location et vous le transmettre prochainement.</p>
+
+          <p><strong>Prochaines étapes :</strong></p>
+          <ol>
+            <li>Réception de votre contrat par email</li>
+            <li>Signature de votre contrat en ligne</li>
+            <li>Versement du dépôt de garantie</li>
+            <li>Planification de votre arrivée</li>
+          </ol>
+
+          <p>Bienvenue chez Maison Oscar ! 🏡</p>
+          `
+        )
+      } catch (error) {
+        console.error('Erreur envoi email:', error)
+      }
     } else if (validatedData.status === 'REJECTED') {
-      // TODO: Envoyer email de refus
+      // Envoyer email de refus
+      const { sendEmail } = await import('@/lib/email')
+      await sendEmail(
+        currentRequest.email,
+        'Mise à jour de votre candidature - Maison Oscar',
+        `
+        <h2>Mise à jour de votre candidature</h2>
+        <p>Bonjour ${currentRequest.firstName},</p>
+        <p>Nous vous remercions pour votre candidature pour la chambre <strong>${currentRequest.room.name}</strong>.</p>
+        <p>Malheureusement, nous ne pouvons pas donner suite à votre demande à ce moment.</p>
+        ${validatedData.rejectionReason ? `<p><strong>Motif :</strong> ${validatedData.rejectionReason}</p>` : ''}
+        <p>N'hésitez pas à postuler pour d'autres chambres disponibles.</p>
+        <p>Cordialement,<br>L'équipe Maison Oscar</p>
+        `
+      )
     } else if (validatedData.status === 'INCOMPLETE') {
-      // TODO: Envoyer email pour demander des documents manquants
+      // Envoyer email pour demander des documents manquants
+      const { sendEmail } = await import('@/lib/email')
+      await sendEmail(
+        currentRequest.email,
+        'Documents manquants - Maison Oscar',
+        `
+        <h2>Documents manquants pour votre candidature</h2>
+        <p>Bonjour ${currentRequest.firstName},</p>
+        <p>Votre candidature pour la chambre <strong>${currentRequest.room.name}</strong> est en cours de traitement.</p>
+        <p>Cependant, nous avons besoin de documents complémentaires pour finaliser l'étude de votre dossier.</p>
+        ${validatedData.reviewNotes ? `<p><strong>Documents requis :</strong><br>${validatedData.reviewNotes}</p>` : ''}
+        <p>Merci de nous transmettre ces éléments dans les meilleurs délais.</p>
+        <p>Cordialement,<br>L'équipe Maison Oscar</p>
+        `
+      )
     }
     
     return NextResponse.json({

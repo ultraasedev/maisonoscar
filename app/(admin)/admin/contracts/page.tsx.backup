@@ -1,0 +1,890 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import {
+  Plus,
+  Search,
+  Eye,
+  CheckCircle,
+  XCircle,
+  Euro,
+  Users,
+  Calendar,
+  FileText,
+  Download,
+  Star,
+  Trash2,
+  RefreshCw,
+  Filter,
+  X,
+  Clock,
+  Settings,
+  Loader2,
+  AlertTriangle,
+  Edit,
+  Save,
+  Copy,
+  Send,
+  FileSignature
+} from 'lucide-react'
+import { toast } from 'sonner'
+
+interface Contract {
+  id: string
+  contractNumber: string
+  booking: {
+    user: {
+      firstName: string
+      lastName: string
+      email: string
+    }
+    room: {
+      name: string
+      number: number
+      price: number
+    }
+  }
+  monthlyRent: number
+  deposit: number
+  charges: number
+  startDate: string
+  endDate: string
+  status: string
+  pdfUrl?: string
+  createdAt: string
+  signatures: any[]
+}
+
+interface ContractTemplate {
+  id: string
+  name: string
+  description?: string
+  pdfData: string
+  isDefault: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+// Configuration des statuts
+const statusConfig = {
+  DRAFT: { label: 'Brouillon', color: 'bg-gray-100 text-gray-700 border-gray-200', icon: Clock },
+  PENDING: { label: 'En attente signature', color: 'bg-yellow-100 text-yellow-700 border-yellow-200', icon: Clock },
+  SENT: { label: 'Envoyé aux locataires', color: 'bg-blue-100 text-blue-700 border-blue-200', icon: Send },
+  SIGNED: { label: 'Signé', color: 'bg-green-100 text-green-700 border-green-200', icon: CheckCircle },
+  ACTIVE: { label: 'Bail actif', color: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: CheckCircle },
+  EXPIRED: { label: 'Expiré', color: 'bg-red-100 text-red-700 border-red-200', icon: XCircle },
+  TERMINATED: { label: 'Résilié', color: 'bg-orange-100 text-orange-700 border-orange-200', icon: AlertTriangle }
+}
+
+export default function ContractsPage() {
+  const [activeTab, setActiveTab] = useState<'templates' | 'contracts'>('templates')
+  const [contracts, setContracts] = useState<Contract[]>([])
+  const [templates, setTemplates] = useState<ContractTemplate[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedStatus, setSelectedStatus] = useState<string>('all')
+  const [showFilters, setShowFilters] = useState(false)
+
+  // Template editing
+  const [editingTemplate, setEditingTemplate] = useState<ContractTemplate | null>(null)
+  const [showTemplateEditor, setShowTemplateEditor] = useState(false)
+  const [templateContent, setTemplateContent] = useState('')
+  const [templateName, setTemplateName] = useState('')
+  const [templateDescription, setTemplateDescription] = useState('')
+
+  useEffect(() => {
+    if (activeTab === 'contracts') {
+      loadContracts()
+    } else {
+      loadTemplates()
+    }
+  }, [activeTab])
+
+  const loadContracts = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/contracts')
+      const data = await response.json()
+
+      if (data.success) {
+        setContracts(data.data || [])
+      } else {
+        toast.error('Erreur lors du chargement des contrats')
+      }
+    } catch (error) {
+      console.error('Erreur:', error)
+      toast.error('Impossible de charger les contrats')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const loadTemplates = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/contract-templates')
+      const data = await response.json()
+
+      if (data.success) {
+        setTemplates(data.data || [])
+      } else {
+        toast.error('Erreur lors du chargement des templates')
+      }
+    } catch (error) {
+      console.error('Erreur:', error)
+      toast.error('Impossible de charger les templates')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const deleteContract = async (id: string, contractNumber: string) => {
+    if (!confirm(`Supprimer le contrat ${contractNumber} ?\n\nCette action est irréversible.`)) return
+
+    try {
+      const response = await fetch(`/api/contracts/${id}`, { method: 'DELETE' })
+      const data = await response.json()
+
+      if (data.success) {
+        toast.success('Contrat supprimé avec succès')
+        loadContracts()
+      } else {
+        toast.error(data.error || 'Erreur lors de la suppression')
+      }
+    } catch (error) {
+      console.error('Erreur:', error)
+      toast.error('Erreur lors de la suppression')
+    }
+  }
+
+  const deleteTemplate = async (id: string, name: string) => {
+    if (!confirm(`Supprimer le template "${name}" ?\n\nCette action est irréversible.`)) return
+
+    try {
+      const response = await fetch(`/api/contract-templates/${id}`, { method: 'DELETE' })
+      const data = await response.json()
+
+      if (data.success) {
+        toast.success('Template supprimé avec succès')
+        loadTemplates()
+      } else {
+        toast.error(data.error || 'Erreur lors de la suppression')
+      }
+    } catch (error) {
+      console.error('Erreur:', error)
+      toast.error('Erreur lors de la suppression')
+    }
+  }
+
+  const setTemplateAsDefault = async (id: string) => {
+    try {
+      const response = await fetch(`/api/contract-templates/${id}/set-default`, { method: 'POST' })
+      const data = await response.json()
+
+      if (data.success) {
+        toast.success('Template défini comme modèle par défaut')
+        loadTemplates()
+      } else {
+        toast.error(data.error || 'Erreur')
+      }
+    } catch (error) {
+      console.error('Erreur:', error)
+      toast.error('Erreur lors de la définition')
+    }
+  }
+
+  const regeneratePDF = async (id: string) => {
+    try {
+      const response = await fetch(`/api/contracts/${id}/regenerate-pdf`, { method: 'POST' })
+      const data = await response.json()
+
+      if (data.success) {
+        toast.success('PDF regénéré avec signature admin')
+        loadContracts()
+      } else {
+        toast.error(data.error || 'Erreur')
+      }
+    } catch (error) {
+      console.error('Erreur:', error)
+      toast.error('Erreur lors de la regénération')
+    }
+  }
+
+  const downloadPDF = (contract: Contract) => {
+    if (!contract.pdfUrl) {
+      toast.error('Aucun PDF disponible')
+      return
+    }
+
+    try {
+      const link = document.createElement('a')
+      link.href = contract.pdfUrl
+      link.download = `contrat-${contract.contractNumber}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      toast.success('Téléchargement du PDF démarré')
+    } catch (error) {
+      console.error('Erreur téléchargement:', error)
+      toast.error('Erreur lors du téléchargement')
+    }
+  }
+
+  const previewContract = (contract: Contract) => {
+    if (!contract.pdfUrl) {
+      toast.error('Aucun PDF disponible pour la prévisualisation')
+      return
+    }
+
+    try {
+      const newWindow = window.open('', '_blank')
+      if (newWindow) {
+        newWindow.document.write(`
+          <html>
+            <head><title>Contrat ${contract.contractNumber}</title></head>
+            <body style="margin:0; padding:0;">
+              <iframe src="${contract.pdfUrl}" style="width:100%; height:100vh; border:none;"></iframe>
+            </body>
+          </html>
+        `)
+        newWindow.document.close()
+      } else {
+        toast.error('Impossible d\'ouvrir la prévisualisation')
+      }
+    } catch (error) {
+      console.error('Erreur prévisualisation:', error)
+      toast.error('Erreur lors de la prévisualisation')
+    }
+  }
+
+  const openTemplateEditor = (template?: ContractTemplate) => {
+    console.log('🔧 [DEBUG] openTemplateEditor called with:', template?.name || 'nouveau template')
+    if (template) {
+      setEditingTemplate(template)
+      setTemplateName(template.name)
+      setTemplateDescription(template.description || '')
+      setTemplateContent(template.pdfData)
+      console.log('📄 [DEBUG] Template data loaded:', template.name)
+    } else {
+      setEditingTemplate(null)
+      setTemplateName('')
+      setTemplateDescription('')
+      setTemplateContent(`CONTRAT DE LOCATION EN COLOCATION
+=====================================
+
+Entre les soussignés :
+
+**LE BAILLEUR**
+{{OWNER_NAME}}
+Adresse : {{OWNER_ADDRESS}}
+Email : {{OWNER_EMAIL}}
+Téléphone : {{OWNER_PHONE}}
+
+ET
+
+**LE LOCATAIRE**
+{{TENANT_FIRSTNAME}} {{TENANT_LASTNAME}}
+Email : {{TENANT_EMAIL}}
+Téléphone : {{TENANT_PHONE}}
+
+IL A ÉTÉ CONVENU CE QUI SUIT :
+
+## Article 1 : OBJET DU CONTRAT
+Le bailleur loue au locataire la chambre suivante :
+- Désignation : {{ROOM_NAME}} (Chambre n°{{ROOM_NUMBER}})
+- Surface : {{ROOM_SURFACE}} m²
+- Étage : {{ROOM_FLOOR}}
+
+## Article 2 : DURÉE DU BAIL
+Le présent bail est consenti pour une durée de {{CONTRACT_DURATION}} mois.
+Date de début : {{START_DATE}}
+Date de fin : {{END_DATE}}
+
+## Article 3 : LOYER ET CHARGES
+Loyer mensuel : {{MONTHLY_RENT}}€ charges comprises
+Détail :
+- Loyer hors charges : {{BASE_RENT}}€
+- Charges : {{CHARGES}}€
+
+## Article 4 : DÉPÔT DE GARANTIE
+Un dépôt de garantie de {{SECURITY_DEPOSIT}}€ est versé à la signature.
+
+## Article 5 : SIGNATURES
+
+Fait à {{CITY}}, le {{CONTRACT_DATE}}
+
+**Le Bailleur**                    **Le Locataire**
+
+[SIGNATURE:ADMIN_SIGNATURE]         [SIGNATURE:TENANT_SIGNATURE]`)
+    }
+    console.log('🔧 [DEBUG] Setting showTemplateEditor to true')
+    setShowTemplateEditor(true)
+  }
+
+  const saveTemplate = async () => {
+    if (!templateName.trim()) {
+      toast.error('Veuillez donner un nom au template')
+      return
+    }
+
+    try {
+      const url = editingTemplate ? `/api/contract-templates/${editingTemplate.id}` : '/api/contract-templates'
+      const method = editingTemplate ? 'PUT' : 'POST'
+
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: templateName,
+          description: templateDescription,
+          content: templateContent
+        })
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        toast.success(editingTemplate ? 'Template modifié' : 'Template créé')
+        setShowTemplateEditor(false)
+        loadTemplates()
+      } else {
+        toast.error(data.error || 'Erreur lors de la sauvegarde')
+      }
+    } catch (error) {
+      console.error('Erreur:', error)
+      toast.error('Erreur lors de la sauvegarde')
+    }
+  }
+
+  // Filtrage des contrats
+  const filteredContracts = contracts.filter(contract => {
+    const matchesSearch = contract.contractNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         contract.booking.user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         contract.booking.user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         contract.booking.room.name.toLowerCase().includes(searchTerm.toLowerCase())
+
+    const matchesStatus = selectedStatus === 'all' || contract.status === selectedStatus
+
+    return matchesSearch && matchesStatus
+  })
+
+  const filteredTemplates = templates.filter(template =>
+    template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (template.description || '').toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
+  const contractsStats = {
+    total: contracts.length,
+    active: contracts.filter(c => c.status === 'ACTIVE').length,
+    pending: contracts.filter(c => c.status === 'PENDING' || c.status === 'SENT').length,
+    signed: contracts.filter(c => c.status === 'SIGNED').length
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="px-4 sm:px-6 lg:px-8">
+          <div className="py-6">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-3">
+                  <div className="flex-shrink-0">
+                    <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center">
+                      <FileText className="w-5 h-5 text-white" />
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+                      Gestion des Contrats
+                    </h1>
+                    <p className="text-sm text-gray-600 truncate">
+                      {loading ? 'Chargement...' :
+                        activeTab === 'templates'
+                          ? `${templates.length} template${templates.length > 1 ? 's' : ''} • ${templates.filter(t => t.isDefault).length} par défaut`
+                          : `${contractsStats.total} contrat${contractsStats.total > 1 ? 's' : ''} • ${contractsStats.active} actif${contractsStats.active > 1 ? 's' : ''}`
+                      }
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 lg:hidden"
+                >
+                  <Filter className="w-4 h-4" />
+                  Filtres
+                </button>
+
+                <button
+                  onClick={activeTab === 'contracts' ? loadContracts : loadTemplates}
+                  disabled={loading}
+                  className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                  <span className="hidden sm:inline">Actualiser</span>
+                </button>
+
+                {activeTab === 'templates' && (
+                  <button
+                    onClick={() => openTemplateEditor()}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span className="hidden sm:inline">Nouveau template</span>
+                    <span className="sm:hidden">Nouveau</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Tabs */}
+            <div className="mt-6 border-b border-gray-200">
+              <nav className="-mb-px flex space-x-8">
+                <button
+                  onClick={() => setActiveTab('templates')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'templates'
+                      ? 'border-black text-black'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <FileSignature className="w-4 h-4" />
+                    Contrats Types
+                  </div>
+                </button>
+                <button
+                  onClick={() => setActiveTab('contracts')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === 'contracts'
+                      ? 'border-black text-black'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4" />
+                    Contrats Signés
+                    {contractsStats.total > 0 && (
+                      <span className="ml-1 bg-gray-100 text-gray-600 py-0.5 px-2 rounded-full text-xs">
+                        {contractsStats.total}
+                      </span>
+                    )}
+                  </div>
+                </button>
+              </nav>
+            </div>
+
+            {/* Stats pour les contrats signés */}
+            {activeTab === 'contracts' && (
+              <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-gray-500" />
+                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Total</span>
+                  </div>
+                  <div className="mt-1 text-xl font-semibold text-gray-900">{contractsStats.total}</div>
+                </div>
+
+                <div className="bg-emerald-50 rounded-lg p-4">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-emerald-500" />
+                    <span className="text-xs font-medium text-emerald-600 uppercase tracking-wide">Actifs</span>
+                  </div>
+                  <div className="mt-1 text-xl font-semibold text-emerald-900">{contractsStats.active}</div>
+                </div>
+
+                <div className="bg-yellow-50 rounded-lg p-4">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-yellow-500" />
+                    <span className="text-xs font-medium text-yellow-600 uppercase tracking-wide">En attente</span>
+                  </div>
+                  <div className="mt-1 text-xl font-semibold text-yellow-900">{contractsStats.pending}</div>
+                </div>
+
+                <div className="bg-green-50 rounded-lg p-4">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-green-500" />
+                    <span className="text-xs font-medium text-green-600 uppercase tracking-wide">Signés</span>
+                  </div>
+                  <div className="mt-1 text-xl font-semibold text-green-900">{contractsStats.signed}</div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Filters & Search */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="px-4 sm:px-6 lg:px-8">
+          <div className={`py-4 ${showFilters ? 'block' : 'hidden'} lg:block`}>
+            <div className="flex flex-col lg:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder={activeTab === 'templates' ? "Rechercher un template..." : "Rechercher par numéro, nom ou chambre..."}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-sm"
+                  />
+                </div>
+              </div>
+
+              {activeTab === 'contracts' && (
+                <div className="flex gap-2">
+                  <select
+                    value={selectedStatus}
+                    onChange={(e) => setSelectedStatus(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent text-sm"
+                  >
+                    <option value="all">Tous les statuts</option>
+                    {Object.entries(statusConfig).map(([status, config]) => (
+                      <option key={status} value={status}>{config.label}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="px-4 sm:px-6 lg:px-8 py-6">
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="flex items-center gap-3 text-gray-600">
+              <Loader2 className="w-5 h-5 animate-spin" />
+              <span>Chargement...</span>
+            </div>
+          </div>
+        ) : activeTab === 'templates' ? (
+          // Templates View
+          filteredTemplates.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FileSignature className="w-6 h-6 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                {templates.length === 0 ? 'Aucun template de contrat' : 'Aucun résultat'}
+              </h3>
+              <p className="text-gray-600 mb-6">
+                {templates.length === 0
+                  ? 'Créez votre premier template de contrat qui sera envoyé aux futurs locataires'
+                  : 'Essayez de modifier vos critères de recherche'
+                }
+              </p>
+              {templates.length === 0 && (
+                <button
+                  onClick={() => openTemplateEditor()}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800"
+                >
+                  <Plus className="w-4 h-4" />
+                  Créer un template
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+              {filteredTemplates.map((template, index) => (
+                <motion.div
+                  key={template.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="bg-white rounded-xl border border-gray-200 hover:border-gray-300 transition-colors"
+                >
+                  <div className="p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-start gap-3 flex-1">
+                        <div className="flex-shrink-0">
+                          <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                            <FileSignature className="w-5 h-5 text-gray-600" />
+                          </div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="text-lg font-semibold text-gray-900 truncate">
+                              {template.name}
+                            </h3>
+                            {template.isDefault && (
+                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700 border border-yellow-200">
+                                <Star className="w-3 h-3" />
+                                Défaut
+                              </span>
+                            )}
+                          </div>
+                          {template.description && (
+                            <p className="text-sm text-gray-600 line-clamp-2">{template.description}</p>
+                          )}
+                          <p className="text-xs text-gray-500 mt-2">
+                            Créé le {new Date(template.createdAt).toLocaleDateString('fr-FR')}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => openTemplateEditor(template)}
+                        className="flex-1 inline-flex items-center justify-center gap-1 px-3 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                      >
+                        <Edit className="w-4 h-4" />
+                        Modifier
+                      </button>
+
+                      {!template.isDefault && (
+                        <button
+                          onClick={() => setTemplateAsDefault(template.id)}
+                          className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-yellow-600 bg-yellow-50 hover:bg-yellow-100 rounded-lg transition-colors"
+                          title="Définir comme défaut"
+                        >
+                          <Star className="w-4 h-4" />
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => deleteTemplate(template.id, template.name)}
+                        className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                        title="Supprimer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )
+        ) : (
+          // Contracts View (même code qu'avant mais adapté)
+          filteredContracts.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FileText className="w-6 h-6 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                {contracts.length === 0 ? 'Aucun contrat signé' : 'Aucun résultat'}
+              </h3>
+              <p className="text-gray-600">
+                {contracts.length === 0
+                  ? 'Les contrats signés par les locataires apparaîtront ici'
+                  : 'Essayez de modifier vos critères de recherche'
+                }
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredContracts.map((contract, index) => {
+                const statusInfo = statusConfig[contract.status as keyof typeof statusConfig] || statusConfig.DRAFT
+                const StatusIcon = statusInfo.icon
+
+                return (
+                  <motion.div
+                    key={contract.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="bg-white rounded-xl border border-gray-200 hover:border-gray-300 transition-colors"
+                  >
+                    <div className="p-4 sm:p-6">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0">
+                              <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                                <FileText className="w-5 h-5 text-gray-600" />
+                              </div>
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-3 mb-2">
+                                <h3 className="text-lg font-semibold text-gray-900 truncate">
+                                  #{contract.contractNumber}
+                                </h3>
+                                <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${statusInfo.color}`}>
+                                  <StatusIcon className="w-3 h-3" />
+                                  {statusInfo.label}
+                                </span>
+                              </div>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
+                                <div className="flex items-center gap-2">
+                                  <Users className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                  <span className="text-gray-600 truncate">
+                                    {contract.booking.user.firstName} {contract.booking.user.lastName}
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                  <FileText className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                  <span className="text-gray-600 truncate">
+                                    {contract.booking.room.name}
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                  <Euro className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                  <span className="text-gray-600">
+                                    {contract.monthlyRent}€/mois
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                  <span className="text-gray-600">
+                                    {new Date(contract.startDate).toLocaleDateString('fr-FR')}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Signatures info */}
+                              {contract.signatures.length > 0 && (
+                                <div className="mt-3 flex items-center gap-2 text-sm">
+                                  <CheckCircle className="w-4 h-4 text-green-500" />
+                                  <span className="text-gray-600">
+                                    {contract.signatures.length} signature{contract.signatures.length > 1 ? 's' : ''}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <button
+                            onClick={() => previewContract(contract)}
+                            className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                            title="Prévisualiser le contrat"
+                          >
+                            <Eye className="w-4 h-4" />
+                            <span className="hidden sm:inline">Voir</span>
+                          </button>
+
+                          {contract.pdfUrl && (
+                            <button
+                              onClick={() => downloadPDF(contract)}
+                              className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
+                              title="Télécharger le PDF"
+                            >
+                              <Download className="w-4 h-4" />
+                              <span className="hidden sm:inline">PDF</span>
+                            </button>
+                          )}
+
+                          <button
+                            onClick={() => regeneratePDF(contract.id)}
+                            className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
+                            title="Regénérer PDF avec signature admin"
+                          >
+                            <RefreshCw className="w-4 h-4" />
+                            <span className="hidden sm:inline">Regénérer</span>
+                          </button>
+
+                          <button
+                            onClick={() => deleteContract(contract.id, contract.contractNumber)}
+                            className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                            title="Supprimer le contrat"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            <span className="hidden lg:inline">Supprimer</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )
+              })}
+            </div>
+          )
+        )}
+      </div>
+
+      {/* Template Editor Modal */}
+      {showTemplateEditor && (
+        <div className="fixed inset-0 z-[9999] overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-medium text-gray-900">
+                  {editingTemplate ? 'Modifier le template' : 'Nouveau template de contrat'}
+                </h3>
+                <button
+                  onClick={() => setShowTemplateEditor(false)}
+                  className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Nom du template
+                  </label>
+                  <input
+                    type="text"
+                    value={templateName}
+                    onChange={(e) => setTemplateName(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                    placeholder="Ex: Contrat Étudiant, Contrat Professionnel..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Description (optionnel)
+                  </label>
+                  <input
+                    type="text"
+                    value={templateDescription}
+                    onChange={(e) => setTemplateDescription(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                    placeholder="Description courte du template..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Contenu du contrat
+                  </label>
+                  <div className="mb-2 text-xs text-gray-500">
+                    Utilisez des variables entre doubles accolades : {'{{VARIABLE_NAME}}'}
+                  </div>
+                  <textarea
+                    value={templateContent}
+                    onChange={(e) => setTemplateContent(e.target.value)}
+                    rows={20}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent font-mono text-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  onClick={() => setShowTemplateEditor(false)}
+                  className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={saveTemplate}
+                  className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800"
+                >
+                  <Save className="w-4 h-4" />
+                  {editingTemplate ? 'Mettre à jour' : 'Créer'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
