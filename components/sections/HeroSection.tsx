@@ -7,6 +7,7 @@ import { useRef, useState, useEffect } from 'react';
 
 export const HeroSection = () => {
   const [roomCount, setRoomCount] = useState(0);
+  const [buildInfo, setBuildInfo] = useState<any>(null);
   const [content, setContent] = useState({
     title: "Créateur de liens",
     subtitle: "en Bretagne",
@@ -26,7 +27,13 @@ export const HeroSection = () => {
         }
       })
       .catch(err => console.error('Erreur:', err));
-    
+
+    // Récupérer les infos de build
+    fetch('/api/build-info')
+      .then(res => res.json())
+      .then(data => setBuildInfo(data))
+      .catch(err => console.error('Build info error:', err));
+
     // Récupérer le contenu de la section
     fetch('/api/cms/sections')
       .then(res => res.json())
@@ -153,7 +160,7 @@ export const HeroSection = () => {
       </motion.div>
       
       {/* Scroll Indicator */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 1, delay: 2 }}
@@ -168,6 +175,20 @@ export const HeroSection = () => {
           <ArrowDown className="w-5 h-5" />
         </motion.div>
       </motion.div>
+
+      {/* Build Info Debug */}
+      {buildInfo && process.env.NODE_ENV === 'development' && (
+        <div className="absolute top-4 right-4 bg-black/80 text-white text-xs px-3 py-2 rounded-lg">
+          <div>Build: {buildInfo.version}</div>
+          <div>Commit: {buildInfo.commit?.slice(0, 7)}</div>
+          <div>Env: {buildInfo.environment}</div>
+        </div>
+      )}
+
+      {/* Production version indicator - always visible but small */}
+      <div className="absolute bottom-4 right-4 text-xs text-black/30">
+        v{buildInfo?.version || '2025-09-19'} • {roomCount || '-'} chambres
+      </div>
     </section>
   );
 };
