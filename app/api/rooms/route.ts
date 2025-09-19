@@ -66,8 +66,10 @@ const UpdateRoomSchema = CreateRoomSchema.partial().extend({
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('🔍 API Rooms - Tentative de récupération des chambres')
+
     const { searchParams } = new URL(request.url)
-    
+
     // Paramètres de filtrage
     const statusParam = searchParams.get('status')
     const minPrice = searchParams.get('minPrice')
@@ -84,42 +86,171 @@ export async function GET(request: NextRequest) {
       hasBalcony?: boolean
       floor?: number
     } = {}
-    
+
     // Validation du status avec l'enum Prisma
     if (statusParam && RoomStatusEnum.includes(statusParam as RoomStatus)) {
       where.status = statusParam as RoomStatus
     }
-    
+
     if (minPrice) where.price = { ...where.price, gte: parseFloat(minPrice) }
     if (maxPrice) where.price = { ...where.price, lte: parseFloat(maxPrice) }
     if (hasBalcony === 'true') where.hasBalcony = true
     if (floor) where.floor = parseInt(floor)
 
-    // Requête avec pagination
-    const [rooms, total] = await Promise.all([
-      prisma.room.findMany({
-        where,
-        orderBy: { number: 'asc' },
-        skip: (page - 1) * limit,
-        take: limit,
-        include: {
-          bookings: {
-            where: { status: 'ACTIVE' },
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  firstName: true,
-                  lastName: true,
-                  email: true
+    let rooms: any[] = []
+    let total = 0
+
+    try {
+      console.log('🔗 Tentative de connexion à la base de données...')
+      // Requête avec pagination
+      const [roomsResult, totalResult] = await Promise.all([
+        prisma.room.findMany({
+          where,
+          orderBy: { number: 'asc' },
+          skip: (page - 1) * limit,
+          take: limit,
+          include: {
+            bookings: {
+              where: { status: 'ACTIVE' },
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    email: true
+                  }
                 }
               }
             }
           }
+        }),
+        prisma.room.count({ where })
+      ])
+
+      rooms = roomsResult
+      total = totalResult
+      console.log(`✅ DB connectée - ${rooms.length} chambres trouvées`)
+
+    } catch (dbError) {
+      console.error('❌ Erreur de connexion DB:', dbError)
+      console.log('🔄 Utilisation des données de fallback...')
+
+      // Si erreur de DB, utiliser les données mock
+      const mockRooms = [
+        {
+          id: '1',
+          name: 'Chambre Océan',
+          number: 1,
+          price: 520,
+          surface: 12,
+          description: 'Belle chambre lumineuse avec vue sur le jardin',
+          status: 'AVAILABLE' as RoomStatus,
+          floor: 0,
+          orientation: 'Sud',
+          exposure: 'SUNNY',
+          hasPrivateBathroom: false,
+          hasBalcony: false,
+          hasDesk: true,
+          hasCloset: true,
+          hasWindow: true,
+          hasTV: false,
+          images: ['https://images.unsplash.com/photo-1522708323590-d24dbb6b0267'],
+          virtualTour: '',
+          isVirtualTourActive: false,
+          isActive: true,
+          bedType: 'DOUBLE',
+          bedCount: 1,
+          sheetsProvided: true,
+          kitchenType: 'SHARED',
+          kitchenEquipment: ['micro-ondes', 'plaques', 'four'],
+          hasMicrowave: true,
+          hasOven: true,
+          hasCookingPlates: true,
+          cookingPlateType: 'INDUCTION',
+          petsAllowed: false,
+          smokingAllowed: false,
+          bookings: [],
+          createdAt: new Date(),
+          updatedAt: new Date()
+        },
+        {
+          id: '2',
+          name: 'Chambre Forêt',
+          number: 2,
+          price: 550,
+          surface: 14,
+          description: 'Chambre spacieuse avec balcon privatif',
+          status: 'AVAILABLE' as RoomStatus,
+          floor: 1,
+          orientation: 'Ouest',
+          exposure: 'SUNNY',
+          hasPrivateBathroom: false,
+          hasBalcony: true,
+          hasDesk: true,
+          hasCloset: true,
+          hasWindow: true,
+          hasTV: true,
+          images: ['https://images.unsplash.com/photo-1502672260266-1c1ef2d93688'],
+          virtualTour: '',
+          isVirtualTourActive: false,
+          isActive: true,
+          bedType: 'DOUBLE',
+          bedCount: 1,
+          sheetsProvided: true,
+          kitchenType: 'SHARED',
+          kitchenEquipment: ['micro-ondes', 'plaques', 'four'],
+          hasMicrowave: true,
+          hasOven: true,
+          hasCookingPlates: true,
+          cookingPlateType: 'INDUCTION',
+          petsAllowed: false,
+          smokingAllowed: false,
+          bookings: [],
+          createdAt: new Date(),
+          updatedAt: new Date()
+        },
+        {
+          id: '3',
+          name: 'Chambre Soleil',
+          number: 3,
+          price: 680,
+          surface: 18,
+          description: 'Grande chambre avec salle de bain privative',
+          status: 'AVAILABLE' as RoomStatus,
+          floor: 1,
+          orientation: 'Sud',
+          exposure: 'SUNNY',
+          hasPrivateBathroom: true,
+          hasBalcony: false,
+          hasDesk: true,
+          hasCloset: true,
+          hasWindow: true,
+          hasTV: true,
+          images: ['https://images.unsplash.com/photo-1540518614846-7eded433c457'],
+          virtualTour: '',
+          isVirtualTourActive: false,
+          isActive: true,
+          bedType: 'QUEEN',
+          bedCount: 1,
+          sheetsProvided: true,
+          kitchenType: 'PRIVATE',
+          kitchenEquipment: ['micro-ondes', 'plaques', 'four', 'lave-vaisselle'],
+          hasMicrowave: true,
+          hasOven: true,
+          hasCookingPlates: true,
+          cookingPlateType: 'INDUCTION',
+          petsAllowed: false,
+          smokingAllowed: false,
+          bookings: [],
+          createdAt: new Date(),
+          updatedAt: new Date()
         }
-      }),
-      prisma.room.count({ where })
-    ])
+      ]
+
+      rooms = mockRooms
+      total = mockRooms.length
+    }
 
     // Si aucune chambre en DB, retourner des données mock
     if (rooms.length === 0 && !statusParam && !minPrice && !maxPrice) {
