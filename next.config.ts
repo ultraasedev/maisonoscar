@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
   },
 
   experimental: {
-    optimizeCss: true,
+    optimizeCss: false,
     optimizeServerReact: true,
     // ✅ FIX: Simplifier les Server Actions
     serverActions: {
