@@ -1,6 +1,5 @@
-Build trigger: 2025-09-19 09:15:00
-Fix room count API with proper DB fallback
-PostCSS configuration restored for Tailwind v4
-Environment variables should be properly configured in Vercel dashboard
-Added build info debug endpoint and version indicator
-FORCE CACHE INVALIDATION - LATEST DEPLOYMENT REQUIRED
+Build trigger: 2025-09-19 09:20:00
+DATABASE ENVIRONMENT VARIABLE ADDED TO VERCEL DASHBOARD
+Redeploy to apply new MongoDB connection string
+Room count should now work with real database
+Environment variables configured - testing DB connection
