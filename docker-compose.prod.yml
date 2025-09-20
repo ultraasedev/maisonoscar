@@ -1,0 +1,85 @@
+services:
+  # Application Next.js
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: maisonoscar-app
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://mongo:27017/MAISONOSCAR
+      - NEXTAUTH_URL=https://maisonoscar.fr
+      - NEXTAUTH_SECRET=MaisonOscar2025ProdSecret_8kF9mQ3wE7rT2nL5pY6uI9oX1cV4bN
+      - ENCRYPTION_KEY=2a9f4b8c7e1d3f6a9b2e5c8d1a4f7b9e2c5f8a1d4b7e9c2f5a8b1e4c7f9a2d5
+      - JWT_SECRET=8f3e9a1c6d2b7e4f9a3c6e1d4b7f9e2a5c8f1d4b7e9a2c5f8e1d4b7f9a3c6e1
+      - USE_LOCAL_DB=true
+      - SITE_URL=https://maisonoscar.fr
+      - CONTACT_EMAIL=contact@maisonoscar.fr
+      - ADMIN_EMAIL=admin@maisonoscar.fr
+    depends_on:
+      - mongo
+    networks:
+      - maisonoscar-network
+    volumes:
+      - ./uploads:/app/uploads
+      - ./public/images:/app/public/images
+
+  # Base de données MongoDB
+  mongo:
+    image: mongo:7.0
+    container_name: maisonoscar-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: maisonoscar_admin
+      MONGO_INITDB_ROOT_PASSWORD: MaisonOscar2025MongoPassword!
+      MONGO_INITDB_DATABASE: MAISONOSCAR
+    volumes:
+      - mongo_data:/data/db
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    ports:
+      - "27017:27017"
+    networks:
+      - maisonoscar-network
+
+  # Proxy Nginx avec SSL automatique
+  nginx:
+    image: nginx:alpine
+    container_name: maisonoscar-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - certbot_certs:/etc/letsencrypt
+      - certbot_webroot:/var/www/certbot
+    depends_on:
+      - app
+    networks:
+      - maisonoscar-network
+
+  # Certbot pour SSL automatique
+  certbot:
+    image: certbot/certbot
+    container_name: maisonoscar-certbot
+    restart: unless-stopped
+    volumes:
+      - certbot_certs:/etc/letsencrypt
+      - certbot_webroot:/var/www/certbot
+    command: certonly --webroot --webroot-path=/var/www/certbot --email admin@maisonoscar.fr --agree-tos --no-eff-email -d maisonoscar.fr -d www.maisonoscar.fr
+    depends_on:
+      - nginx
+
+networks:
+  maisonoscar-network:
+    driver: bridge
+
+volumes:
+  mongo_data:
+    driver: local
+  certbot_certs:
+    driver: local
+  certbot_webroot:
+    driver: local

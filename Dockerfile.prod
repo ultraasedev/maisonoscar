@@ -1,0 +1,68 @@
+# Dockerfile pour production optimisé
+FROM node:20-alpine AS base
+
+# Installer les dépendances système nécessaires
+RUN apk add --no-cache libc6-compat
+
+# Étape de construction des dépendances
+FROM base AS deps
+WORKDIR /app
+
+# Copier les fichiers de configuration des paquets
+COPY package.json pnpm-lock.yaml* ./
+
+# Installer pnpm et les dépendances
+RUN corepack enable pnpm && pnpm install --frozen-lockfile --prod
+
+# Étape de construction de l'application
+FROM base AS builder
+WORKDIR /app
+
+# Copier les dépendances depuis l'étape précédente
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Variables d'environnement pour le build
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Installer pnpm et construire l'application
+RUN corepack enable pnpm && \
+    pnpm prisma generate && \
+    pnpm run build
+
+# Étape de production
+FROM base AS runner
+WORKDIR /app
+
+# Créer un utilisateur non-privilégié
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
+
+# Copier les fichiers nécessaires
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+
+# Copier les fichiers spécifiques
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+
+# Créer les dossiers nécessaires
+RUN mkdir -p /app/uploads /app/public/images && \
+    chown -R nextjs:nodejs /app
+
+# Changer vers l'utilisateur non-privilégié
+USER nextjs
+
+# Exposer le port
+EXPOSE 3000
+
+# Variables d'environnement
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+# Commande de démarrage
+CMD ["node", "server.js"]

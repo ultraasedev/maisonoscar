@@ -1,0 +1,82 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  VPS_HOST: 31.97.154.11
+  VPS_USER: root
+  DOCKER_COMPOSE_FILE: docker-compose.prod.yml
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup SSH key
+      uses: webfactory/ssh-agent@v0.8.0
+      with:
+        ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+
+    - name: Add VPS to known hosts
+      run: |
+        ssh-keyscan -H ${{ env.VPS_HOST }} >> ~/.ssh/known_hosts
+
+    - name: Copy files to VPS
+      run: |
+        ssh ${{ env.VPS_USER }}@${{ env.VPS_HOST }} "mkdir -p /opt/maisonoscar"
+        rsync -avz --delete \
+          --exclude '.git' \
+          --exclude 'node_modules' \
+          --exclude '.next' \
+          --exclude 'uploads' \
+          ./ ${{ env.VPS_USER }}@${{ env.VPS_HOST }}:/opt/maisonoscar/
+
+    - name: Deploy application
+      run: |
+        ssh ${{ env.VPS_USER }}@${{ env.VPS_HOST }} << 'EOF'
+          cd /opt/maisonoscar
+
+          # Arrêter les conteneurs existants
+          docker compose -f ${{ env.DOCKER_COMPOSE_FILE }} down || true
+
+          # Nettoyer les images non utilisées
+          docker system prune -f
+
+          # Construire et démarrer les nouveaux conteneurs
+          docker compose -f ${{ env.DOCKER_COMPOSE_FILE }} build --no-cache
+          docker compose -f ${{ env.DOCKER_COMPOSE_FILE }} up -d
+
+          # Attendre que l'application soit prête
+          sleep 30
+
+          # Vérifier le statut
+          docker compose -f ${{ env.DOCKER_COMPOSE_FILE }} ps
+        EOF
+
+    - name: Health check
+      run: |
+        ssh ${{ env.VPS_USER }}@${{ env.VPS_HOST }} << 'EOF'
+          # Vérifier que les conteneurs fonctionnent
+          if docker compose -f /opt/maisonoscar/${{ env.DOCKER_COMPOSE_FILE }} ps | grep -q "Up"; then
+            echo "✅ Deployment successful"
+          else
+            echo "❌ Deployment failed"
+            docker compose -f /opt/maisonoscar/${{ env.DOCKER_COMPOSE_FILE }} logs
+            exit 1
+          fi
+        EOF
+
+    - name: Notification
+      if: always()
+      run: |
+        if [ ${{ job.status }} == 'success' ]; then
+          echo "🚀 Déploiement réussi sur https://maisonoscar.fr"
+        else
+          echo "💥 Échec du déploiement - Vérifiez les logs"
+        fi
